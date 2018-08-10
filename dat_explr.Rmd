@@ -1,0 +1,39 @@
+---
+title: "Pteropod Puget Sound time series"
+author: ""
+output: 
+  html_document:
+    code_folding: hide
+    css: kable.css
+self_contained: yes
+runtime: shiny
+---
+
+```{r, message = F, warning = F}
+library(knitr)
+opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent'), eval = T)
+
+library(tidyverse)
+library(shiny)
+
+data(chmdat)
+data(biodat)
+```
+
+```{r}
+
+toplo <- chmdat %>% 
+  filter(var %in% 'ara') 
+
+ggplot(toplo, aes(x = date, y = avev)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin = minv, ymax = maxv), width = 0) +
+  facet_grid(station~.) +
+  theme_bw() + 
+  theme(
+    strip.background = element_blank(), 
+    axis.title.x = element_blank()
+    ) +
+  ylab('Omega')
+```
+

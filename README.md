@@ -12,4 +12,4 @@ Processed data:
 
 * `biodat.RData` processed biology data, only dissolution types as percentage of individuals were kept, abundances as no of inds/m3, average and standard deviation of sizes also retained
 
-* `chmdat.RData` processed chemistry data, depth is m, pCO2 is uatm, all other variables are umol/kg
+* `chmdat.RData` processed chemistry data, pCO2 is uatm, all other variables are umol/kg
