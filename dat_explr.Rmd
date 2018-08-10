@@ -15,25 +15,122 @@ opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transpare
 
 library(tidyverse)
 library(shiny)
+library(gridExtra)
 
 data(chmdat)
 data(biodat)
 ```
 
+Dissolution data:
+
 ```{r}
-
-toplo <- chmdat %>% 
-  filter(var %in% 'ara') 
-
-ggplot(toplo, aes(x = date, y = avev)) + 
-  geom_point() + 
-  geom_errorbar(aes(ymin = minv, ymax = maxv), width = 0) +
-  facet_grid(station~.) +
-  theme_bw() + 
-  theme(
-    strip.background = element_blank(), 
-    axis.title.x = element_blank()
-    ) +
-  ylab('Omega')
+column(12, 
+  column(4, 
+    selectInput('chm', 'Select chemistry:', choices = c('ara', 'co3', 'ph', 'pco2'))
+  ),
+  
+  column(4, 
+    selectInput('val', 'Select chemistry value:', choices = c('min', 'ave', 'max'))
+  ),
+  
+  column(4, 
+    selectInput('dis', 'Select dissolution:', choices = c('typ1', 'typ2', 'typ3', 'typ23'))
+  )
+)
 ```
+
+```{r}
+renderPlot({
+  
+  # inputs
+  chm <- input$chm
+  dis <- input$dis
+  val <- input$val
+  
+  dat <- chmdat %>% 
+    filter(var %in% chm) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'mo')) %>% 
+    select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
+    gather('dissvar', 'dissval', typ1:typ23) %>% 
+    gather('chemvar', 'chemval', ave:max) %>% 
+    filter(dissvar %in% dis) %>% 
+    filter(chemvar %in% val)
+
+  p <- ggplot(dat, aes(x = chemval, y = dissval)) +
+    # geom_path(aes(group = station)) +
+    stat_smooth(method = 'lm', se = F) +
+    geom_point(aes(fill = mo), pch = 21, size = 4) +
+    facet_grid(~ yr, scales = 'free') +
+    ylab(dis) +
+    xlab(chm) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+```
+
+```{r}
+renderPlot({
+  
+  # input 
+  dis <- input$dis
+  chm <- input$chm
+  val <- input$val
+  
+  # bio
+  toplo1 <- biodat %>% 
+    select(date, yr, mo, station, typ1, typ2, typ3, typ23) %>% 
+    gather('diss', 'val', typ1:typ23) %>% 
+    filter(diss %in% dis)
+  
+  p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
+    geom_line(aes(group = yr)) +
+    geom_point(aes(fill = mo), alpha = 0.7, size = 4, pch = 21) +
+    facet_grid(station~.) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      axis.title.x = element_blank(), 
+      legend.title = element_blank(),
+      # panel.grid = element_blank(), 
+      legend.position = 'top'
+      ) +
+    ylab(dis) + 
+    scale_x_discrete(labels = format(unique(toplo1$date), '%Y-%m'))
+  
+  # chem
+  toplo2 <- chmdat %>% 
+    filter(var %in% chm) %>% 
+    gather('estv', 'valv', ave:max) %>% 
+    filter(estv %in% val)
+  
+  p2 <- ggplot(toplo2, aes(x = factor(date), y = valv)) +
+    geom_line(aes(group = yr)) +
+    geom_point(aes(fill = mo), alpha = 0.7, size  = 4, pch = 21) +
+    facet_grid(station~.) +
+    theme_bw(base_family = 'serif', base_size = 16) + 
+    theme(
+      strip.background = element_blank(), 
+      axis.title.x = element_blank(), 
+      legend.title = element_blank(),
+      # panel.grid = element_blank(), 
+      legend.position = 'top'
+      ) +
+    ylab(chm) + 
+    scale_x_discrete(labels = format(unique(toplo2$date), '%Y-%m'))
+  
+  grid.arrange(p1, p2, ncol = 2)
+  
+}, height = 500, width = 900)
+```
+
+
+
 

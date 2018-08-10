@@ -1,11 +1,12 @@
 library(tidyverse)
+library(lubridate)
 library(readxl)
 
 # bio data
 biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodData') %>% 
   select(-`Sample size for size measurement`, -`sample size for SEM imaging`, -`# of type I`, -`# of type II`, -`# of type III`, -`# of type II&III scores`) %>% 
   rename(
-    year = Year, 
+    yr = Year, 
     mo = Month, 
     station = Station, 
     abu = `Abundance (# individuals/m3)`,
@@ -18,17 +19,24 @@ biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodDa
   ) %>% 
   mutate(
     station = gsub('^P', '', station), 
-    station = as.numeric(station)
-  )
+    station = as.numeric(station),
+    mo = month(mo, label = T), 
+    dy = 15
+  ) %>% 
+  unite('date', yr, mo, dy, sep = '-', remove = F) %>% 
+  mutate(date = ymd(date)) %>% 
+  select(-dy)
 
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
 # chemdat
 chmdat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'ChemData_100m', na = c('', '-999')) %>% 
-  select(-`record no`, -CRUISE_ID, -Time_collected, -LONGITUDE_DEC, -LATITUDE_DEC, -stn_niskin, -CTDPRS_DBAR, -`DEPTH (M)`) %>% 
+  select(-`record no`, -CRUISE_ID, -Time_collected, -stn_niskin, -CTDPRS_DBAR, -`DEPTH (M)`) %>% 
   rename(
     date = Date_collected, 
     station = STATION_NO,
+    lat = LATITUDE_DEC,
+    lon = LONGITUDE_DEC,
     niskin = NISKIN_NO,
     oxy = CTDOXY_UMOL_KG_ADJ,
     nitrate = `NITRATE umol_kg`,
@@ -46,11 +54,31 @@ chmdat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'ChemData_1
     date = as.Date(date)
   ) %>% 
   gather('var', 'val', oxy:revelle) %>% 
-  group_by(date, station, var) %>% 
-  summarise(
-    avev = mean(val, na.rm = T),
-    minv = min(val, na.rm = T),
-    maxv = max(val, na.rm = T)
+  group_by(station) %>% 
+  mutate(
+    lat = mean(lat), 
+    lon = mean(lon)
   ) 
+
+# fix dates to month, year events
+chmdat <- chmdat %>% 
+  mutate(
+    yr = year(date), 
+    mo = month(date), 
+    mo = ifelse(mo == 10, 9, mo),
+    mo = month(mo, label = T)
+  ) %>% 
+  group_by(yr, mo, station, lon, lat, var) %>% 
+  summarise(
+    ave = mean(val, na.rm = T),
+    min = min(val, na.rm = T),
+    max = max(val, na.rm = T)
+  ) %>% 
+  ungroup %>% 
+  mutate(dy = 15) %>% 
+  unite('date', yr, mo, dy, sep = '-', remove = F) %>% 
+  mutate(date = ymd(date)) %>% 
+  select(-dy) %>% 
+  select(date, yr, mo, station, lon, lat, everything())
 
 save(chmdat, file = 'data/chmdat.RData', compress = 'xz')
