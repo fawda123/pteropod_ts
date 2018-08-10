@@ -92,11 +92,12 @@ renderPlot({
     geom_line(aes(group = yr)) +
     geom_point(aes(fill = mo), alpha = 0.7, size = 4, pch = 21) +
     facet_grid(station~.) +
-    theme_bw(base_family = 'serif', base_size = 14) +
+    theme_bw(base_family = 'serif', base_size = 12) +
     theme(
       strip.background = element_blank(), 
       axis.title.x = element_blank(), 
       legend.title = element_blank(),
+      axis.text.x  = element_text(size = 10, angle = 45, hjust = 1),
       # panel.grid = element_blank(), 
       legend.position = 'top'
       ) +
@@ -113,11 +114,12 @@ renderPlot({
     geom_line(aes(group = yr)) +
     geom_point(aes(fill = mo), alpha = 0.7, size  = 4, pch = 21) +
     facet_grid(station~.) +
-    theme_bw(base_family = 'serif', base_size = 14) + 
+    theme_bw(base_family = 'serif', base_size = 12) + 
     theme(
       strip.background = element_blank(), 
       axis.title.x = element_blank(), 
       legend.title = element_blank(),
+      axis.text.x  = element_text(size = 10, angle = 45, hjust = 1),
       # panel.grid = element_blank(), 
       legend.position = 'top'
       ) +
