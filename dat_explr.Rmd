@@ -21,8 +21,6 @@ data(chmdat)
 data(biodat)
 ```
 
-Dissolution data:
-
 ```{r}
 column(12, 
   column(4, 
@@ -94,7 +92,7 @@ renderPlot({
     geom_line(aes(group = yr)) +
     geom_point(aes(fill = mo), alpha = 0.7, size = 4, pch = 21) +
     facet_grid(station~.) +
-    theme_bw(base_family = 'serif', base_size = 16) +
+    theme_bw(base_family = 'serif', base_size = 14) +
     theme(
       strip.background = element_blank(), 
       axis.title.x = element_blank(), 
@@ -115,7 +113,7 @@ renderPlot({
     geom_line(aes(group = yr)) +
     geom_point(aes(fill = mo), alpha = 0.7, size  = 4, pch = 21) +
     facet_grid(station~.) +
-    theme_bw(base_family = 'serif', base_size = 16) + 
+    theme_bw(base_family = 'serif', base_size = 14) + 
     theme(
       strip.background = element_blank(), 
       axis.title.x = element_blank(), 
