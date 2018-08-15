@@ -14,8 +14,7 @@ biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodDa
     stdsz = `Standard deviation size`, 
     typ1 = `% type I`, 
     typ2 = `% type II`,
-    typ3 = `% type III`,
-    typ23 = `% type II&III`
+    typ3 = `% type III`
   ) %>% 
   mutate(
     station = gsub('^P', '', station), 
@@ -30,14 +29,18 @@ biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodDa
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
 # chemdat
-chmdat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'ChemData_100m', na = c('', '-999')) %>% 
-  select(-`record no`, -CRUISE_ID, -Time_collected, -stn_niskin, -CTDPRS_DBAR, -`DEPTH (M)`) %>% 
+chmdat <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
+  select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, CTDSAL_PSS78,
+         CTDOXY_UMOL_KG_ADJ, `NITRATE umol_kg`, `NITRITE umol_kg`, `AMMONIA umol_kg`, `PHOSPHATE umol_kg`, 
+         `SILICATE umol_kg`, `Ph Total in situ`, `pCO2 uatm`, `CO3-- umol/kg`, `Omega Ar`, Revelle) %>% 
   rename(
     date = Date_collected, 
     station = STATION_NO,
     lat = LATITUDE_DEC,
     lon = LONGITUDE_DEC,
     niskin = NISKIN_NO,
+    temp = CTDTMP_DEG_C_ITS90,
+    sal = CTDSAL_PSS78,
     oxy = CTDOXY_UMOL_KG_ADJ,
     nitrate = `NITRATE umol_kg`,
     nitrite = `NITRITE umol_kg`, 
@@ -53,19 +56,21 @@ chmdat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'ChemData_1
   mutate(
     date = as.Date(date)
   ) %>% 
-  gather('var', 'val', oxy:revelle) %>% 
+  gather('var', 'val', temp:revelle) %>% 
   group_by(station) %>% 
   mutate(
     lat = mean(lat), 
     lon = mean(lon)
   ) 
 
-# fix dates to month, year events
+# fix dates to month, year events to match with bio
 chmdat <- chmdat %>% 
   mutate(
     yr = year(date), 
-    mo = month(date), 
-    mo = ifelse(mo == 10, 9, mo),
+    mo = month(date)
+    ) %>% 
+  filter(mo %in% c(4, 7, 9)) %>% 
+  mutate( 
     mo = month(mo, label = T)
   ) %>% 
   group_by(yr, mo, station, lon, lat, var) %>% 

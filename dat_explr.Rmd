@@ -32,7 +32,7 @@ column(12,
   ),
   
   column(4, 
-    selectInput('dis', 'Select dissolution:', choices = c('typ1', 'typ2', 'typ3', 'typ23'))
+    selectInput('dis', 'Select dissolution:', choices = c('typ1', 'typ2', 'typ3'))
   )
 )
 ```
@@ -49,7 +49,7 @@ renderPlot({
     filter(var %in% chm) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
-    gather('dissvar', 'dissval', typ1:typ23) %>% 
+    gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:max) %>% 
     filter(dissvar %in% dis) %>% 
     filter(chemvar %in% val)
@@ -84,8 +84,8 @@ renderPlot({
   
   # bio
   toplo1 <- biodat %>% 
-    select(date, yr, mo, station, typ1, typ2, typ3, typ23) %>% 
-    gather('diss', 'val', typ1:typ23) %>% 
+    select(date, yr, mo, station, typ1, typ2, typ3) %>% 
+    gather('diss', 'val', typ1:typ3) %>% 
     filter(diss %in% dis)
   
   p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
