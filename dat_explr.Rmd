@@ -37,6 +37,8 @@ column(12,
 )
 ```
 
+Year values shown correspond to "cohort-years" that begin in June with spring spawning, i.e., the April "cohort-year" is one year prior to the calendar year.  
+
 ```{r}
 renderPlot({
   
@@ -47,7 +49,7 @@ renderPlot({
   
   dat <- chmdat %>% 
     filter(var %in% chm) %>% 
-    full_join(biodat, by = c('station', 'date', 'yr', 'mo')) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:max) %>% 
@@ -58,7 +60,7 @@ renderPlot({
     # geom_path(aes(group = station)) +
     stat_smooth(method = 'lm', se = F, colour = 'black') +
     geom_point(aes(fill = mo), pch = 21, size = 4) +
-    facet_grid(~ yr, scales = 'free') +
+    facet_grid(~ cohortyr, scales = 'free') +
     ylab(dis) +
     xlab(chm) +
     theme_bw(base_family = 'serif', base_size = 16) +
@@ -84,12 +86,12 @@ renderPlot({
   
   # bio
   toplo1 <- biodat %>% 
-    select(date, yr, mo, station, typ1, typ2, typ3) %>% 
+    select(date, yr, cohortyr, mo, station, typ1, typ2, typ3) %>% 
     gather('diss', 'val', typ1:typ3) %>% 
     filter(diss %in% dis)
   
   p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
-    geom_line(aes(group = yr)) +
+    geom_line(aes(group = cohortyr)) +
     geom_point(aes(fill = mo), alpha = 0.7, size = 4, pch = 21) +
     facet_grid(station~.) +
     theme_bw(base_family = 'serif', base_size = 12) +
@@ -111,7 +113,7 @@ renderPlot({
     filter(estv %in% val)
   
   p2 <- ggplot(toplo2, aes(x = factor(date), y = valv)) +
-    geom_line(aes(group = yr)) +
+    geom_line(aes(group = cohortyr)) +
     geom_point(aes(fill = mo), alpha = 0.7, size  = 4, pch = 21) +
     facet_grid(station~.) +
     theme_bw(base_family = 'serif', base_size = 12) + 

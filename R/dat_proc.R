@@ -20,11 +20,13 @@ biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodDa
     station = gsub('^P', '', station), 
     station = as.numeric(station),
     mo = month(mo, label = T), 
-    dy = 15
+    dy = 15,
+    cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr)
   ) %>% 
   unite('date', yr, mo, dy, sep = '-', remove = F) %>% 
   mutate(date = ymd(date)) %>% 
-  select(-dy)
+  select(-dy) %>%
+  select(date, yr, cohortyr, everything())
 
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
@@ -82,8 +84,11 @@ chmdat <- chmdat %>%
   ungroup %>% 
   mutate(dy = 15) %>% 
   unite('date', yr, mo, dy, sep = '-', remove = F) %>% 
-  mutate(date = ymd(date)) %>% 
+  mutate(
+    date = ymd(date),
+    cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr)
+    ) %>% 
   select(-dy) %>% 
-  select(date, yr, mo, station, lon, lat, everything())
+  select(date, yr, cohortyr, mo, station, lon, lat, everything())
 
 save(chmdat, file = 'data/chmdat.RData', compress = 'xz')
