@@ -16,9 +16,11 @@ opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transpare
 library(tidyverse)
 library(shiny)
 library(gridExtra)
+library(glue)
 
 data(chmdat)
 data(biodat)
+data(simdat)
 ```
 
 ```{r}
@@ -158,7 +160,7 @@ strdat <- reactive({
   araval <- input$araval
   strmsr <- input$strmsr
   thrsh <- input$thrsh
-  
+
   dat <- chmdat %>% 
     filter(var %in% 'ara') %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
@@ -173,7 +175,7 @@ strdat <- reactive({
       ) %>% 
     filter(mo %in% 'Apr') %>% 
     select(-aracat)
-  
+
   names(dat)[names(dat) %in% strmsr] <- 'strsval'
   
   return(dat)
@@ -184,17 +186,141 @@ renderPlot({
   
   # input
   strdat <- strdat()
-  strmsr <- input$strmsr
   
   ggplot(strdat, aes(x = factor(strsval), y = typ3)) +
     geom_boxplot() +
     scale_x_discrete('Cumulative stress magnitude') +
     scale_y_continuous('End of cohort-year (April) type 3') +
     theme_bw(base_family = 'serif', base_size = 18)
-    
-}, height = 600)
+
+}, height = 400, width = 550)
   
 ```
+
+### Simulated data
+
+Conditions at each station were simulated for 2008.
+
+```{r}
+column(12, 
+       
+       column(4, numericInput('simthrsh', 'Under-saturation threshold:', value = 1, min = 0, max = 5, step = 0.1)),
+       
+       column(4, numericInput('runlen', 'Duration threshold (days):', value = 1, min = 1, max = 360, step = 1))
+       
+)
+```
+
+```{r}
+strdatsim <- reactive({
+
+  # input
+  simthrsh <- input$simthrsh
+  runlen <- input$runlen
+  
+  out <- simdat %>% 
+    mutate(
+      undercat = ifelse(ara < simthrsh, 'under', 'over')
+    ) %>% 
+    group_by(station) %>% 
+    nest %>% 
+    mutate(
+      tots = purrr::map(data, function(x){
+  
+        # get runs
+        runs <- rle(x$undercat)
+  
+        # get runs where undersaturated
+        unders <- runs$lengths[runs$values == 'under']
+
+        # divide by four becuase one day is four time steps
+        dys <- floor(unders / (4 * runlen))
+        
+        # get total number of runs in period
+        dys <- sum(dys)
+        
+        return(dys)
+  
+      })
+    ) %>% 
+    select(-data) %>%
+    unnest
+  
+  return(out)
+  
+})
+```
+
+```{r}
+renderPlot({
+  
+  # input
+  simthrsh <- input$simthrsh
+  runlen <- input$runlen
+  strdatsim <- strdatsim()
+  
+  # y axis label
+  ttl <- glue('Cumulative stress at under-saturation threshold of {simthrsh}\nCount as number of instances where under-saturated greater than {runlen} day(s)')
+  
+  ggplot(strdatsim, aes(x = factor(station), y = tots)) + 
+    geom_bar(stat = 'identity') +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    geom_text(aes(label = tots), vjust = 0, nudge_y = 4) +
+    scale_x_discrete('Station') +
+    scale_y_continuous('Stress count') + 
+    ggtitle(ttl)
+
+}, height = 400)
+
+renderPlot({
+  
+  # input
+  strdatsim <- strdatsim()
+  
+  # april type 3
+  toplo <- biodat %>% 
+    filter(mo %in% 'Apr') %>% 
+    mutate(station = as.character(station)) %>% 
+    left_join(strdatsim, by = 'station')
+  
+  ggplot(toplo, aes(x = tots, y = typ3)) + 
+    # geom_point() + 
+    geom_text(aes(label = station)) +
+    facet_wrap(~cohortyr, ncol = 2) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank()
+    ) + 
+    stat_smooth(method = 'lm') +
+    scale_y_continuous('April type 3 dissolution') +
+    scale_x_continuous('Stress count')
+  
+}, height = 400)
+
+renderPlot({
+  
+  # input
+  simthrsh <- input$simthrsh
+  
+  blw <- simdat %>% 
+    mutate(ara = ifelse(ara <= simthrsh, ara, NA))
+  
+  ggplot(simdat, aes(x = datetime, y = ara)) +
+    geom_hline(yintercept = simthrsh, colour = 'grey') +
+    geom_point(size = 0.5) +
+    geom_point(data = blw, colour = 'red', size = 0.5) +
+    scale_x_datetime(expand = c(0, 0), date_labels = '%m', date_breaks = '1 month') +
+    facet_grid(station~.) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(),
+      axis.title.x = element_blank(),
+      panel.grid = element_blank()
+    )
+}, height = 600)
+
+```
+
 
 
 

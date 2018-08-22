@@ -2,6 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(readxl)
 
+##
 # bio data
 biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodData') %>% 
   select(-`Sample size for size measurement`, -`sample size for SEM imaging`, -`# of type I`, -`# of type II`, -`# of type III`, -`# of type II&III scores`) %>% 
@@ -30,7 +31,8 @@ biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodDa
 
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
-# chemdat
+##
+# in situ chemdat
 chmdat <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, CTDSAL_PSS78,
          CTDOXY_UMOL_KG_ADJ, `NITRATE umol_kg`, `NITRITE umol_kg`, `AMMONIA umol_kg`, `PHOSPHATE umol_kg`, 
@@ -92,3 +94,24 @@ chmdat <- chmdat %>%
   select(date, yr, cohortyr, mo, station, lon, lat, everything())
 
 save(chmdat, file = 'data/chmdat.RData', compress = 'xz')
+
+##
+# simulated chemistry, 2008 
+# only aragonite is selected, other vars avaialable
+# sims run from Jan. 6 12am to Dec. 30 6pm, six hour time step
+simdat <- list.files('raw/', '^Time', full.names = T) %>%
+  enframe %>%
+  mutate(station = gsub('^.*TimeSeries_P([0-9]+)_.*$', '\\1', value)) %>%
+  select(-name) %>%
+  mutate(
+    simdat = map(value, read_excel)
+  ) %>%
+  unnest %>%
+  rename(
+    datetime = DateTime,
+    ara = OmegaAr
+  ) %>%
+  select(station, datetime, ara) %>%
+  na.omit # empty values at end of time series for each station must be removed
+
+save(simdat, file = 'data/simdat.RData', compress = 'xz')
