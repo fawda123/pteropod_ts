@@ -199,7 +199,7 @@ renderPlot({
 
 ### Simulated data
 
-Conditions at each station were simulated for 2008.
+Conditions at each station were simulated for 2008 at six hour time steps for every station.  Each time series was used to estimate the number of instances at which aragonite was under-saturated.  This measure of stress was then compared to the amount of type 3 dissolution during April for each cohort-year.  The stress measure can be varied by choosing the threshold for defining under-saturation and the number of days for defining a stress period.  For example, choosing a threshold of one and number of days as one will count the stress as the total number of days at which saturation was below one.  
 
 ```{r}
 column(12, 
