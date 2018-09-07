@@ -68,13 +68,18 @@ chmdat <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA',
   ) 
 
 # fix dates to month, year events to match with bio
+# October in 2014 was averaged with september because of missing sep data at some stations
 chmdat <- chmdat %>% 
   mutate(
     yr = year(date), 
     mo = month(date)
     ) %>% 
-  filter(mo %in% c(4, 7, 9)) %>% 
-  mutate( 
+  filter(mo %in% c(4, 7, 9, 10)) %>%
+  mutate(
+    mo = case_when(
+      yr == 2014 & mo == 10 ~ 9,
+      TRUE ~ mo
+    ),
     mo = month(mo, label = T)
   ) %>% 
   group_by(yr, mo, station, lon, lat, var) %>% 
