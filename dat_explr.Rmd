@@ -137,9 +137,9 @@ renderPlot({
 
 ### Evaluating cumulative stress
 
-Within each cohort year, the "cumulative stress" as the duration of time was estimated at which under-saturation of aragonite occcurred.  This was calculated two ways.  First, the number of times a sampling period was under-saturated was counted for all of the sampling months in a cohort-year.  This produced an estimate of total stress within a cohort-year as a count measure from zero to three, where zero meant that none of the sampling periods were under-saturated and three meant all were under-saturaed.  Second, the number of times that July and September sampling events were undder-saturated were counted as a measure of prior cumulative stress for the April sampling event.  This produced an estimate of cumulative stress as a count measure varying from zero to two.  For both cases, the amount of type 3 dissolution that was observed in April (i.e., mature adults at the end of a cohort-year) was used as a response to the cumulative stress measure.  
+Within each cohort year, the "cumulative stress" as the duration of time was estimated at which under-saturation of aragonite occcurred.  This was calculated two ways.  First, the number of times a sampling period was under-saturated was counted for all of the sampling months in a cohort-year.  This produced an estimate of total stress within a cohort-year as a count measure from zero to three, where zero meant that none of the sampling periods were under-saturated and three meant all were under-saturated.  Second, the number of times that July and September sampling events were under-saturated were counted as a measure of prior cumulative stress for the April sampling event.  This produced an estimate of cumulative stress as a count measure varying from zero to two.  For both cases, the amount of type 3 dissolution that was observed in April (i.e., mature adults at the end of a cohort-year) was used as a response to the cumulative stress measure.  
 
-The analysis also considered what was defined as cumulative stress in addition to duration.  In other words, cumulative stress could be measured using the average aragonite saturation in a sampling month at a station, the minimum saturation, or the maximum saturation.  Additionally, what defines over- and under-saturation was also considered.  Typically, values less than one are considered under-saturated but this value could be changed as a measure of specificity to which individuals may show differential response.  The results below can be assessed in consideration of the above.  
+The analysis also considered what was defined as cumulative stress in addition to duration.  In other words, cumulative stress could be measured using the average aragonite saturation in a sampling month at a station, the minimum saturation, or the maximum saturation.  Additionally, what defines over- and under-saturation was also considered.  Typically, values less than one are considered undefr-saturated but this value could be changed as a measure of specificity to which individuals may show differential response.  The results below can be assessed in consideration of the above.  
 
 ```{r}
 column(12, 
@@ -148,7 +148,7 @@ column(12,
        
        column(4, selectInput('strmsr', 'Select stress measure:', choices = list(total = 'totstr', cumulative = 'cumstr'))),
        
-       column(4, numericInput('thrsh', 'Under-saturation threshold:', value = 1, min = 0, max = 5))
+       column(4, numericInput('thrsh', 'Under-saturation threshold:', value = 1, min = 0, max = 5, step = 0.1))
        
        )
 ```
@@ -191,9 +191,10 @@ renderPlot({
     geom_boxplot() +
     scale_x_discrete('Cumulative stress magnitude') +
     scale_y_continuous('End of cohort-year (April) type 3') +
-    theme_bw(base_family = 'serif', base_size = 18)
+    theme_bw(base_family = 'serif', base_size = 18) +
+    facet_wrap(~cohortyr, ncol = 2) 
 
-}, height = 400, width = 550)
+}, height = 400, width = 750)
   
 ```
 
