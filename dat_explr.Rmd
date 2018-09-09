@@ -3,24 +3,62 @@ title: "Pteropod Puget Sound time series"
 author: ""
 output: 
   html_document:
-    code_folding: hide
     css: kable.css
 self_contained: yes
 runtime: shiny
 ---
 
-```{r, message = F, warning = F}
+```{r, message = F, warning = F, echo = F}
 library(knitr)
-opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent'), eval = T)
+opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent'), eval = T, echo = F)
 
 library(tidyverse)
 library(shiny)
 library(gridExtra)
 library(glue)
+library(lubridate)
 
 data(chmdat)
 data(biodat)
 data(simdat)
+
+# pteropod birthday
+strt <- '2008-06-01' %>% 
+  as.Date
+
+# add cumulative day counter to simdat
+# starts from bday, then arrange by counter
+simdat <- simdat %>% 
+  group_by(station) %>% 
+  arrange(station, datetime) %>% 
+  mutate( # setup index
+    dys =  6 / 24, 
+    dys = cumsum(dys),
+    crr = dys[datetime == strt],
+    dys = case_when(
+      datetime >= strt ~ dys - crr,
+      datetime < strt ~ dys + max(dys) - crr
+    )
+  ) %>%
+  arrange(station, dys) %>% 
+  select(-crr)
+
+# aggregated biological data to match with sim data
+# 2014 and 2015 averaged by month
+biodatagg <- biodat %>% 
+  filter(cohortyr %in% c(2014, 2015)) %>% 
+  select(station, mo, typ1, typ2, typ3) %>% 
+  gather('var', 'val', -station, -mo) %>% 
+  group_by(station, mo, var) %>% 
+  summarise(val = mean(val, na.rm = T)) %>% 
+  spread(var, val) %>% 
+  ungroup %>% 
+  mutate(
+    datetime = paste('2008', as.numeric(mo), '15 00:00', sep = '-'),
+    datetime = as.POSIXct(datetime, tz = 'UTC'),
+    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr')), 
+    station = as.character(station)
+  ) 
 ```
 
 ```{r}
@@ -59,9 +97,9 @@ renderPlot({
     filter(chemvar %in% val)
 
   p <- ggplot(dat, aes(x = chemval, y = dissval)) +
-    # geom_path(aes(group = station)) +
+    # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se = F, colour = 'black') +
-    geom_point(aes(fill = mo), pch = 21, size = 4) +
+    geom_point(aes(fill = mo, group = station), pch = 21, size = 4) +
     facet_grid(~ cohortyr, scales = 'free') +
     ylab(dis) +
     xlab(chm) +
@@ -200,56 +238,51 @@ renderPlot({
 
 ### Simulated data
 
-Conditions at each station were simulated for 2008 at six hour time steps for every station.  Each time series was used to estimate the number of instances at which aragonite was under-saturated.  This measure of stress was then compared to the amount of type 3 dissolution during April for each cohort-year.  The stress measure can be varied by choosing the threshold for defining under-saturation and the number of days for defining a stress period.  For example, choosing a threshold of one and number of days as one will count the stress as the total number of days at which saturation was below one.  
+Conditions at each station were simulated for 2008 at six hour time steps for every station.  This time series is considered a representative sample of the seasonal variation in water quality conditions at each site independent of annual variation.  Each time series was used to estimate a cumulative stress measure of the number of days at which aragonite was under-saturated, starting from June 1st as the start of a pteropod cohort year.  This measure of stress was then compared to the amount of dissolution during the three sample months in the biological dataset.  Annual data were averaged by each month for the biological data.  The stress measure can be varied by choosing the threshold for defining under-saturation.  For example, choosing a threshold of one and number of days as one will count the stress as the total number of days at which saturation was below one.  
 
 ```{r}
 column(12, 
        
-       column(4, numericInput('simthrsh', 'Under-saturation threshold:', value = 1, min = 0, max = 5, step = 0.1)),
-       
-       column(4, numericInput('runlen', 'Duration threshold (days):', value = 1, min = 1, max = 360, step = 1))
+       column(4, numericInput('simthrsh', 'Under-saturation threshold:', value = 1, min = 0, max = 5, step = 0.1))
        
 )
 ```
 
 ```{r}
-strdatsim <- reactive({
+# cumulative stress measures from sims
+simdatcum <- reactive({
 
   # input
   simthrsh <- input$simthrsh
-  runlen <- input$runlen
-  
-  out <- simdat %>% 
-    mutate(
-      undercat = ifelse(ara < simthrsh, 'under', 'over')
-    ) %>% 
-    group_by(station) %>% 
-    nest %>% 
-    mutate(
-      tots = purrr::map(data, function(x){
-  
-        # get runs
-        runs <- rle(x$undercat)
-  
-        # get runs where undersaturated
-        unders <- runs$lengths[runs$values == 'under']
 
-        # divide by four becuase one day is four time steps
-        dys <- floor(unders / (4 * runlen))
-        
-        # get total number of runs in period
-        dys <- sum(dys)
-        
-        return(dys)
-  
-      })
-    ) %>% 
-    select(-data) %>%
-    unnest
-  
+  # get cumulative stress measures of days < aragonite thresh
+  # aggregated by time
+  # from simulated data
+  out <- simdat %>% 
+    crossing(thrsh = simthrsh) %>% 
+    group_by(station, thrsh) %>% 
+    arrange(station, thrsh, dys) %>% 
+    mutate( # setup cumumulative stress by threshold
+      strdys = ifelse(ara < thrsh, 6 / 24, 0),
+      strdys = cumsum(strdys)
+    )
+
   return(out)
   
 })
+
+# aggregated bio data merged with cumulative stress measures
+biodataggmrg <- reactive({
+  
+  # input
+  simdatcum <- simdatcum()
+  
+  out <- biodatagg %>% 
+    left_join(simdatcum, by = c('station', 'datetime'))
+  
+  return(out)
+  
+  })
 ```
 
 ```{r}
@@ -257,69 +290,71 @@ renderPlot({
   
   # input
   simthrsh <- input$simthrsh
-  runlen <- input$runlen
-  strdatsim <- strdatsim()
+  simdatcum <- simdatcum()
   
-  # y axis label
-  ttl <- glue('Cumulative stress at under-saturation threshold of {simthrsh}\nCount as number of instances where under-saturated greater than {runlen} day(s)')
-  
-  ggplot(strdatsim, aes(x = factor(station), y = tots)) + 
-    geom_bar(stat = 'identity') +
-    theme_bw(base_family = 'serif', base_size = 16) +
-    geom_text(aes(label = tots), vjust = 0, nudge_y = 4) +
-    scale_x_discrete('Station') +
-    scale_y_continuous('Stress count') + 
-    ggtitle(ttl)
-
-}, height = 400)
-
-renderPlot({
-  
-  # input
-  strdatsim <- strdatsim()
-  
-  # april type 3
-  toplo <- biodat %>% 
-    filter(mo %in% 'Apr') %>% 
-    mutate(station = as.character(station)) %>% 
-    left_join(strdatsim, by = 'station')
-  
-  ggplot(toplo, aes(x = tots, y = typ3)) + 
-    # geom_point() + 
-    geom_text(aes(label = station)) +
-    facet_wrap(~cohortyr, ncol = 2) +
-    theme_bw(base_family = 'serif', base_size = 16) +
-    theme(
-      strip.background = element_blank()
-    ) + 
-    stat_smooth(method = 'lm') +
-    scale_y_continuous('April type 3 dissolution') +
-    scale_x_continuous('Stress count')
-  
-}, height = 400)
-
-renderPlot({
-  
-  # input
-  simthrsh <- input$simthrsh
-  
-  blw <- simdat %>% 
+  blw <- simdatcum %>% 
     mutate(ara = ifelse(ara <= simthrsh, ara, NA))
-  
-  ggplot(simdat, aes(x = datetime, y = ara)) +
+
+  # time series 
+  p1 <- ggplot(simdatcum, aes(x = datetime, y = ara)) +
     geom_hline(yintercept = simthrsh, colour = 'grey') +
-    geom_point(size = 0.5) +
-    geom_point(data = blw, colour = 'red', size = 0.5) +
+    geom_point(size = 0.5, colour = 'lightgreen') +
+    geom_point(data = blw, colour = 'tomato1', size = 0.5) +
     scale_x_datetime(expand = c(0, 0), date_labels = '%m', date_breaks = '1 month') +
     facet_grid(station~.) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(),
-      axis.title.x = element_blank(),
       panel.grid = element_blank()
-    )
+    ) +
+    xlab('Calendar year') +
+    ylab('Aragonite saturation state')
+  
+  # cmulative stress days
+  p2 <- ggplot(simdatcum, aes(x = dys, y = strdys)) +
+    geom_abline(slope = 1, intercept = 0) +
+    geom_line(colour = 'tomato1') +
+    facet_grid(station~.) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(),
+      panel.grid = element_blank()
+    ) +
+    xlab(glue('Days since {month(strt, label = T)} {day(strt)}')) + 
+    ylab(glue('Cumulative days with aragonite < {simthrsh}'))
+  
+  grid.arrange(p1, p2, ncol = 2)
+  
 }, height = 600)
 
+renderPlot({
+  
+  # input
+  biodataggmrg <- biodataggmrg()
+  simthrsh <- input$simthrsh
+  
+  # dissolution in long format
+  toplo <- biodataggmrg %>% 
+    gather('var', 'val', typ1:typ3)
+
+  p1 <- ggplot(toplo, aes(x = strdys, y = val)) +
+    geom_line(aes(group = station), colour = 'grey') +
+    geom_point(aes(fill = mo), pch = 21, size = 4) +
+    stat_smooth(method = 'lm', se = F, colour = 'black') +
+    facet_grid(~ var, scales = 'free') +
+    ylab('Dissolution (%)') +
+    xlab(glue('Cumulative days with aragonite < {simthrsh}')) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top', 
+      panel.grid = element_blank()
+    )
+
+  return(p1)
+  
+}, height = 300, width = 850)
 ```
 
 

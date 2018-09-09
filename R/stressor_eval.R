@@ -3,9 +3,12 @@
 
 library(tidyverse)
 library(readxl)
+library(arrangements)
 
+# data setup for example categories of exposure
+# for eval of in situ data
 mos <- c('July', 'Sep', 'Apr')
-prms <- arrangements::permutations(c(0.25, 0.75), k = 3, replace = T) %>% 
+prms <- permutations(c(0.25, 0.75), k = 3, replace = T) %>% 
   as.tibble %>%
   rename_at(vars(everything()), ~ mos) %>% 
   rownames_to_column('id') %>% 
@@ -40,15 +43,19 @@ ggplot(prms, aes(x = mo, y = ara, fill = cts, group = 1)) +
 ######
 # cumulative stress days from simulated data
 
-library(tidyverse)
-
 data(simdat)
+data(biodat)
 
+# pteropod birthday
 strt <- '2008-06-01' %>% 
   as.Date
 
-thrshvls <- seq(0.1, 1, by = 0.1) %>% 
+# aragonite thresholds to eval
+thrshvls <- seq(0.5, 1, by = 0.1) %>% 
   rev
+
+# get cumulative stress measures of days < aragonite thresh
+# from simulated data
 simdat <- simdat %>% 
   crossing(thrsh = thrshvls) %>% 
   group_by(station, thrsh) %>% 
@@ -74,6 +81,9 @@ ggplot(simdat, aes(x = dys, y = strdys, colour = factor(thrsh))) +
   geom_line() + 
   facet_wrap(~station) 
 
+# aggregated biological data to match with sim data
+# 2014 and 2015 averaged by month
+# merged with simulation data
 biodatagg <- biodat %>% 
   filter(cohortyr %in% c(2014, 2015)) %>% 
   select(station, mo, typ1, typ2, typ3) %>% 
@@ -89,3 +99,8 @@ biodatagg <- biodat %>%
     station = as.character(station)
   ) %>% 
   left_join(simdat, by = c('station', 'datetime'))
+
+ggplot(biodatagg, aes(x = strdys, y = typ1)) + 
+  geom_point() + 
+  facet_wrap(~thrsh) + 
+  stat_smooth(method = 'lm')
