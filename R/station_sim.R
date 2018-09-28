@@ -112,3 +112,5 @@ ggplot(araplo, aes(x = lon, y = lat)) +
   scale_colour_gradient(low="lightgreen", high="tomato1")+
   facet_wrap(~mo) + 
   guides(color=guide_legend(), size = guide_legend())
+
+# do some kind of cluster analysis on stations by parameters - optimal clusters?  
