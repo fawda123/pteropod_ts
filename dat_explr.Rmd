@@ -64,7 +64,7 @@ biodatagg <- biodat %>%
 ```{r}
 column(12, 
   column(4, 
-    selectInput('chm', 'Select chemistry:', choices = c('ara', 'co3', 'ph', 'pco2'))
+    selectInput('chm', 'Select chemistry:', choices = c('ara', 'co3', 'ph', 'pco2', 'temp'))
   ),
   
   column(4, 
