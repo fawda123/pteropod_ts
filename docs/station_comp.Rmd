@@ -182,7 +182,7 @@ clst <- dis %>%
 clstcut <- 3
 
 # get cut groups
-clstgrps <- cutree(clst, k = 3)
+clstgrps <- cutree(clst, k = clstcut)
 
 # get order
 clstord <- order.hclust(clst) %>%
