@@ -30,5 +30,5 @@ The analysis is structured to evaluate and provide evidence in support of the fo
      
 3) Stressor frequency and magnitude can be differentially characterized and meaningfully compared to variation in OA response of pteropods
     * Pteropod response to stressors will vary depending on the type of exposure, characterized by acute, chronic, variable, or none
-    * Temporal history of exposure from simulated data will determine pteropod response
+    * Temporal history of exposure from moored data will determine pteropod response
 
