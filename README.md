@@ -2,6 +2,8 @@
 
 Materials for Pteropod time series analysis, [link](http://162.243.131.102:3838/pteropod_ts/dat_explr.Rmd)
 
+Station comparisons, [link](https://fawda123.github.io/pteropod_ts/station_comp)
+
 ## Data summary
 
 The relevant raw datasets are as follows: 

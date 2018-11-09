@@ -120,3 +120,30 @@ simdat <- list.files('raw/', '^Time', full.names = T) %>%
   na.omit # empty values at end of time series for each station must be removed
 
 save(simdat, file = 'data/simdat.RData', compress = 'xz')
+
+##
+# processing mooring data from NOAA
+# https://www.nodc.noaa.gov/ocads/oceans/Moorings/Dabob.html
+# https://www.nodc.noaa.gov/ocads/oceans/Moorings/Twanoh.html
+
+mordat <- list.files('raw/', pattern = '^Dabob|^Twanoh', full.names = T) %>% 
+  tibble(fl = .) %>%
+  mutate(
+    dat = map(fl, function(x){
+      
+      out <- x %>% 
+        read_csv %>% 
+        select(Latitude, Longitude, Date, Time, `SST (C)`, Salinity, `pCO2 SW (sat) uatm`)
+      
+      return(out)
+      
+    })
+  ) %>% 
+  unnest %>% 
+  unite('datetime', Date, Time, sep = ' ') %>% 
+  mutate(
+    fl = gsub('^raw/|_.*$', '', fl),
+    datetime = dmy_hms(datetime, tz = 'UTC')
+  ) %>% 
+  arrange(fl, datetime)
+
