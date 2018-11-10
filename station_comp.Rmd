@@ -25,8 +25,8 @@ library(dendextend)
 library(mapview)
 library(shiny)
 
-load(file = '../data/biodat.RData')
-load(file = '../data/chmdat.RData')
+load(file = 'data/biodat.RData')
+load(file = 'data/chmdat.RData')
 ```
 
 ```{r, fig.height = 6, fig.width = 4}
@@ -55,7 +55,7 @@ ggmap(bsmap) +
 ### Monthly averages by water chemistry {.tabset}
 
 ```{r}
-toplo1a <- read_excel('../raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
+toplo1a <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
          CTDSAL_PSS78, `Omega Ar`) %>% 
   rename(
