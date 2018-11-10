@@ -130,10 +130,11 @@ mordat <- list.files('raw/', pattern = '^Dabob|^Twanoh', full.names = T) %>%
   tibble(fl = .) %>%
   mutate(
     dat = map(fl, function(x){
-      
+
       out <- x %>% 
-        read_csv %>% 
-        select(Latitude, Longitude, Date, Time, `SST (C)`, Salinity, `pCO2 SW (sat) uatm`)
+        read_csv %>%
+        select(matches('CO2.*SW.*wet|Latitude|Longitude|Date|Time')) %>% 
+        rename(CO2 = matches('CO2'))
       
       return(out)
       
@@ -143,7 +144,11 @@ mordat <- list.files('raw/', pattern = '^Dabob|^Twanoh', full.names = T) %>%
   unite('datetime', Date, Time, sep = ' ') %>% 
   mutate(
     fl = gsub('^raw/|_.*$', '', fl),
-    datetime = dmy_hms(datetime, tz = 'UTC')
+    datetime = dmy_hms(datetime, tz = 'UTC'),
+    CO2 = ifelse(CO2 < 0, NA, CO2)
   ) %>% 
   arrange(fl, datetime)
 
+# ggplot(mordat, aes(x = datetime, y = CO2, colour = fl)) + 
+#   geom_line() +
+#   geom_point()

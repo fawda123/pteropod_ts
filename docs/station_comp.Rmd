@@ -1,11 +1,12 @@
 ---
-output:
+title: "Pteropod Puget Sound time series"
+author: ""
+output: 
   html_document:
-  keep_md: yes
-self_contained: no
-code_folding: hide
+self_contained: yes
+runtime: shiny
 ---
-  
+
 # Station similarities
 
 ```{r, echo = F, warning = F, message = F}
@@ -22,10 +23,10 @@ library(vegan)
 library(ggdendro)
 library(dendextend)
 library(mapview)
+library(shiny)
 
 load(file = '../data/biodat.RData')
 load(file = '../data/chmdat.RData')
-load(file = '../data/simdat.RData')
 ```
 
 ```{r, fig.height = 6, fig.width = 4}
@@ -47,10 +48,14 @@ ggmap(bsmap) +
   theme(axis.title = element_blank())
 ```
 
-## Monthly averages by water chemistry {.tabset}
+# {.tabset .tabset-pills}
+
+## Water quality 
+
+### Monthly averages by water chemistry {.tabset}
 
 ```{r}
-toplo <- read_excel('../raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
+toplo1a <- read_excel('../raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
          CTDSAL_PSS78, `Omega Ar`) %>% 
   rename(
@@ -88,11 +93,15 @@ toplo <- read_excel('../raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA
 #   facet_grid(var ~ mo, scales = 'free_y')
 
 # average across years by month
-toplo2 <- toplo %>% 
+toplo1b <- toplo1a %>% 
   group_by(station, var, mo, lat, lon) %>% 
   summarise(
     valmn = mean(val, na.rm = T),
     valsd = sd(val, na.rm = T)
+  ) %>% 
+  ungroup %>% 
+  mutate(
+    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'))
   )
 
 pbase <- theme_bw(base_size = 14, base_family = 'serif') + 
@@ -102,10 +111,10 @@ pbase <- theme_bw(base_size = 14, base_family = 'serif') +
   ) 
 ```
 
-### Salinity
+#### Salinity
 
 ```{r, fig.height = 6, fig.width = 8}
-salplo <- toplo2 %>% 
+salplo <- toplo1b %>% 
   filter(var %in% 'sal')
 p1 <- ggmap(bsmap) +
   geom_point(data = salplo, aes(x = lon, y = lat, size = valmn, alpha = valsd), colour = 'tomato1') + 
@@ -120,10 +129,10 @@ p1 <- ggmap(bsmap) +
 p1
 ```
 
-### Temperature
+#### Temperature
 
 ```{r, fig.height = 6, fig.width = 8}
-tempplo <- toplo2 %>% 
+tempplo <- toplo1b %>% 
   filter(var %in% 'temp')
 p2 <- ggmap(bsmap) +
   geom_point(data = tempplo, aes(x = lon, y = lat, size = valmn, alpha = valsd), colour = 'tomato1') + 
@@ -138,10 +147,10 @@ p2 <- ggmap(bsmap) +
 p2
 ```
 
-### Omega
+#### Omega
 
 ```{r, fig.height = 6, fig.width = 8}
-araplo <- toplo2 %>% 
+araplo <- toplo1b %>% 
   filter(var %in% 'ara')
 p3 <- ggmap(bsmap) +
   geom_point(data = araplo, aes(x = lon, y = lat, size = valmn, alpha = valsd), colour = 'tomato1') + 
@@ -156,134 +165,458 @@ p3 <- ggmap(bsmap) +
 p3
 ```
 
-## Clustering {.tabset}
+### Clustering {.tabset}
 
 ```{r}
-toclst <- toplo2 %>%
-  ungroup %>% 
-  filter(mo %in% 'Sep') %>% 
-  select(station, var, valmn) %>% 
-  spread(var, valmn) %>% 
-  data.frame %>% 
-  column_to_rownames('station')
+selectInput('clmo1', 'Select month for clustering:', choices = c('Jul', 'Sep', 'Apr'), selected = 'Sep')
+```
+
+```{r}
+toclst1 <- reactive({
+  
+  # input
+  clmo1 <- input$clmo1
+
+  out <- toplo1b %>%
+    ungroup %>% 
+    filter(mo %in% clmo1) %>% 
+    select(station, var, valmn) %>% 
+    spread(var, valmn) %>% 
+    data.frame %>% 
+    column_to_rownames('station')
+  
+  return(out)
+  
+})
 
 # dissimilarity
-dis <- toclst %>% 
-  vegdist(method = 'euclidean')
-
+dis1 <- reactive({
+  
+  # input
+  toclst1 <- toclst1()
+  
+  out <- toclst1 %>% 
+    vegdist(method = 'euclidean')
+  
+  return(out)
+  
+})
+  
 # clsuters
-clst <- dis %>% 
-  hclust(method = 'average')
+clst1 <- reactive({
+  
+  # input
+  dis1 <- dis1()
+  
+  out <- dis1 %>%  
+    hclust(method = 'average')
+  
+  return(out)
+  
+})
+
+# cluster groups
+clstgrps1 <- reactive({
+  
+  # input
+  clst1 <- clst1()
+  
+  clstcut <- 3
+  
+  # get cut groups
+  out <- cutree(clst1, k = clstcut)
+  
+  return(out)
+  
+})
 ```
 
-### Dendrogram
+#### Dendrogram
 
 ```{r}
-clstcut <- 3
+renderPlot({
 
-# get cut groups
-clstgrps <- cutree(clst, k = clstcut)
+  # input
+  clst1 <- clst1()
+  clstgrps1 <- clstgrps1()
 
-# get order
-clstord <- order.hclust(clst) %>%
-  clstgrps[.] %>%
-  unique
-
-# get colors, correct by order
-cols <- mapviewGetOption("vector.palette")(as.numeric(clstcut)) %>%
-  .[clstord]
-
-p1 <- clst %>% 
-  as.dendrogram %>% 
-  set("branches_k_color", k = clstcut, value = cols) %>%
-  set("labels_colors", k = clstcut, value = cols) %>%
-  set("labels_cex", 0.8) 
-plot(p1)
-```
-
-### Station dissimilarities
-
-```{r, fig.height = 7, fig.width = 6}
-# prep distance data to plot
-# long format of dist matrix
-toplo <- dis %>% 
-  as.matrix %>% 
-  as.data.frame %>%
-  rownames_to_column('station') %>% 
-  gather('station2', 'dist', -station) %>% 
-  arrange(dist) %>% 
-  mutate(
-    dist = ifelse(station == station2, NA, dist)
-    )
-
-# get site order levels based on clustering
-sitfc <- clst$labels[clst$order]
-toplo <- toplo %>% 
-  mutate(
-    station = factor(station, levels = sitfc), 
-    station2 = factor(station2, levels = sitfc)
-  )
+  clstcut <- max(clstgrps1)
   
-# plot
-p <- ggplot(toplo) + 
-  geom_tile(aes(x = station, y = station2, fill = dist), colour = 'black') +
-  scale_x_discrete('', expand = c(0, 0)) + 
-  scale_y_discrete('', expand = c(0, 0)) +
-  scale_fill_gradient2('Dissimilarity between stations\nby water chemistry', low = 'lightblue', mid = 'white', high = 'tomato1', midpoint = 2) +
-  guides(fill = guide_colourbar(barheight = 0.5, barwidth = 10, label.theme = element_text(size = 11, angle = 0))) + 
-  pbase
+  # get order
+  clstord <- order.hclust(clst1) %>%
+    clstgrps1[.] %>%
+    unique
+  
+  # get colors, correct by order
+  cols <- mapviewGetOption("vector.palette")(as.numeric(clstcut)) %>%
+    .[clstord]
+  
+  p1 <- clst1 %>% 
+    as.dendrogram %>% 
+    set("branches_k_color", k = clstcut, value = cols) %>%
+    set("labels_colors", k = clstcut, value = cols) %>%
+    set("labels_cex", 0.8) 
+  plot(p1)
 
-# index values of cluster cuts
-brks <- clstgrps %>% 
-  .[clst$order] %>% 
-  duplicated %>% 
-  `!` %>% 
-  which %>% 
-  `-` (0.5) %>% 
-  .[-1]
-
-p <- p + 
-  geom_vline(xintercept = brks, size = 1.5) +
-  geom_hline(yintercept = brks, size = 1.5) +
-  theme_bw(base_family = 'serif') +
-  theme(
-    legend.position = 'top',
-    legend.direction = 'horizontal'
-  ) 
-
-
-return(p)
+})
 ```
 
-### Map
+#### Station dissimilarities
 
-```{r, fig.height = 6, fig.width = 4}
-mapplo <- locs %>% 
-  mutate(clstgrps = clstgrps)
+```{r}
+renderPlot({
 
-# plot the basemap
-ggmap(bsmap) + 
-  geom_point(data = mapplo, aes(x = lon, y = lat, fill = clstgrps), pch = 21, size = 8, alpha = 0.7) +
-  geom_text(data = mapplo, aes(x = lon, y = lat, label = station)) + 
-  scale_fill_viridis_c() + 
-  theme_bw(base_family = 'serif') +
-  theme(
-    axis.title = element_blank(), 
-    legend.position = 'none'
+  # input
+  dis1 <- dis1()
+  clst1 <- clst1()
+  clstgrps1 <- clstgrps1()
+
+  # prep distance data to plot
+  # long format of dist matrix
+  toplo <- dis1 %>%
+    as.matrix %>%
+    as.data.frame %>%
+    rownames_to_column('station') %>%
+    gather('station2', 'dist', -station) %>%
+    arrange(dist) %>%
+    mutate(
+      dist = ifelse(station == station2, NA, dist)
+      )
+
+  # get site order levels based on clustering
+  sitfc <- clst1$labels[clst1$order]
+  toplo <- toplo %>%
+    mutate(
+      station = factor(station, levels = sitfc),
+      station2 = factor(station2, levels = sitfc)
     )
+
+  # plot
+  p <- ggplot(toplo) +
+    geom_tile(aes(x = station, y = station2, fill = dist), colour = 'black') +
+    scale_x_discrete('', expand = c(0, 0)) +
+    scale_y_discrete('', expand = c(0, 0)) +
+    scale_fill_gradient2('Dissimilarity between stations\nby water chemistry', low = 'lightblue', mid = 'white', high = 'tomato1', midpoint = 2) +
+    guides(fill = guide_colourbar(barheight = 0.5, barwidth = 10, label.theme = element_text(size = 11, angle = 0))) +
+    pbase
+
+  # index values of cluster cuts
+  brks <- clstgrps1 %>%
+    .[clst1$order] %>%
+    duplicated %>%
+    `!` %>%
+    which %>%
+    `-` (0.5) %>%
+    .[-1]
+
+  p <- p +
+    geom_vline(xintercept = brks, size = 1.5) +
+    geom_hline(yintercept = brks, size = 1.5) +
+    theme_bw(base_family = 'serif') +
+    theme(
+      legend.position = 'top',
+      legend.direction = 'horizontal'
+    )
+
+  return(p)
+
+}, height = 600, width = 700)
 ```
 
-```{r eval = F}
-simdatts <- simdat %>%
-  group_by(station) %>% 
-  nest %>% 
+#### Map
+
+```{r}
+renderPlot({
+
+  # input
+  clst1 <- clst1()
+  clstgrps1 <- clstgrps1()
+
+  mapplo <- locs %>%
+    mutate(clstgrps1 = clstgrps1)
+
+  # plot the basemap
+  ggmap(bsmap) +
+    geom_point(data = mapplo, aes(x = lon, y = lat, fill = clstgrps1), pch = 21, size = 8, alpha = 0.7) +
+    geom_text(data = mapplo, aes(x = lon, y = lat, label = station)) +
+    scale_fill_viridis_c() +
+    theme_bw(base_family = 'serif') +
+    theme(
+      axis.title = element_blank(),
+      legend.position = 'none'
+      )
+  
+}, height = 600, width = 400)
+```
+
+## Pteropod response
+
+### Monthly averages by response measures {.tabset}
+
+```{r}
+toplo2a <- biodat %>%
+  select(cohortyr, mo, station, typ3) %>%
+  left_join(locs, by = 'station') %>%
+  gather('var', 'val', typ3) %>%
+  rename(yr = cohortyr)
+
+# ggplot(toplo, aes(x = factor(station), y = val, fill = factor(yr))) +
+#   geom_boxplot(position = 'dodge') +
+#   facet_grid(var ~ mo, scales = 'free_y')
+
+# average across years by month
+toplo2b <- toplo2a %>%
+  group_by(station, var, mo, lat, lon) %>%
+  summarise(
+    valmn = mean(val, na.rm = T),
+    valsd = sd(val, na.rm = T)
+  ) %>%
+  ungroup %>%
   mutate(
-    datts = map(data, function(x){
-      
-      ts(x$ara, start = 2008, frequency = nrow(x))
-      
-    })
+    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'))
   )
-  spread(station, ara)
+
+pbase <- theme_bw(base_size = 14, base_family = 'serif') +
+  theme(
+    axis.title = element_blank(),
+    strip.background = element_blank()
+  )
 ```
 
+<!-- #### Type 1 -->
+
+<!-- ```{r, fig.height = 6, fig.width = 8} -->
+<!-- typ1plo <- toplo2b %>% -->
+<!--   filter(var %in% 'typ1') -->
+<!-- p1 <- ggmap(bsmap) + -->
+<!--   geom_point(data = typ1plo, aes(x = lon, y = lat, size = valmn, alpha = valsd), colour = 'tomato1') + -->
+<!--   geom_point(data = typ1plo, aes(x = lon, y = lat, size = valmn), pch = 21) + -->
+<!--   scale_size('Type 1 dissolution (ave)', range = c(1, 10)) + -->
+<!--   scale_alpha('Type 1 dissolution (sd)') + -->
+<!--   coord_map() + -->
+<!--   facet_wrap(~mo) + -->
+<!--   pbase + -->
+<!--   guides(alpha = guide_legend(override.aes = list(size=3))) -->
+
+<!-- p1 -->
+<!-- ``` -->
+
+<!-- #### Type 2 -->
+
+<!-- ```{r, fig.height = 6, fig.width = 8} -->
+<!-- typ2plo <- toplo2b %>% -->
+<!--   filter(var %in% 'typ2') -->
+<!-- p2 <- ggmap(bsmap) + -->
+<!--   geom_point(data = typ2plo, aes(x = lon, y = lat, size = valmn, alpha = valsd), colour = 'tomato1') + -->
+<!--   geom_point(data = typ2plo, aes(x = lon, y = lat, size = valmn), pch = 21) + -->
+<!--   scale_size('Type 2 dissolution (ave)', range = c(1, 10)) + -->
+<!--   scale_alpha('Type 2 dissolution (sd)') + -->
+<!--   coord_map() + -->
+<!--   facet_wrap(~mo) + -->
+<!--   pbase + -->
+<!--   guides(alpha = guide_legend(override.aes = list(size=3))) -->
+
+<!-- p2 -->
+<!-- ``` -->
+
+#### Type 3
+
+```{r, fig.height = 6, fig.width = 8}
+typ3plo <- toplo2b %>%
+  filter(var %in% 'typ3')
+p3 <- ggmap(bsmap) +
+  geom_point(data = typ3plo, aes(x = lon, y = lat, size = valmn, alpha = valsd), colour = 'tomato1') +
+  geom_point(data = typ3plo, aes(x = lon, y = lat, size = valmn), pch = 21) +
+  scale_size('Type 3 dissolution (ave)', range = c(1, 10)) +
+  scale_alpha('Type 3 dissolution (sd)') +
+  coord_map() +
+  facet_wrap(~mo) +
+  pbase +
+  guides(alpha = guide_legend(override.aes = list(size=3)))
+
+p3
+```
+
+### Clustering {.tabset}
+
+```{r}
+selectInput('clmo2', 'Select month for clustering:', choices = c('Jul', 'Sep', 'Apr'), selected = 'Sep')
+```
+
+```{r}
+toclst2 <- reactive({
+
+  # input
+  clmo2 <- input$clmo2
+
+  out <- toplo2b %>%
+    ungroup %>%
+    filter(mo %in% clmo2) %>%
+    select(station, var, valmn) %>%
+    spread(var, valmn) %>%
+    data.frame %>%
+    column_to_rownames('station')
+
+  return(out)
+
+})
+
+# dissimilarity
+dis2 <- reactive({
+
+  # input
+  toclst2 <- toclst2()
+
+  out <- toclst2 %>%
+    vegdist(method = 'euclidean')
+
+  return(out)
+
+})
+
+# clsuters
+clst2 <- reactive({
+
+  # input
+  dis2 <- dis2()
+
+  out <- dis2 %>%
+    hclust(method = 'average')
+
+  return(out)
+
+})
+
+# cluster groups
+clstgrps2 <- reactive({
+
+  # input
+  clst2 <- clst2()
+
+  clstcut <- 3
+
+  # get cut groups
+  out <- cutree(clst2, k = clstcut)
+
+  return(out)
+
+})
+```
+
+#### Dendrogram
+
+```{r}
+renderPlot({
+
+  # input
+  clst2 <- clst2()
+  clstgrps2 <- clstgrps2()
+
+  clstcut <- max(clstgrps2)
+
+  # get order
+  clstord <- order.hclust(clst2) %>%
+    clstgrps2[.] %>%
+    unique
+
+  # get colors, correct by order
+  cols <- mapviewGetOption("vector.palette")(as.numeric(clstcut)) %>%
+    .[clstord]
+
+  p1 <- clst2 %>%
+    as.dendrogram %>%
+    set("branches_k_color", k = clstcut, value = cols) %>%
+    set("labels_colors", k = clstcut, value = cols) %>%
+    set("labels_cex", 0.8)
+  plot(p1)
+
+})
+```
+
+#### Station dissimilarities
+
+```{r}
+renderPlot({
+
+  # input
+  dis2 <- dis2()
+  clst2 <- clst2()
+  clstgrps2 <- clstgrps2()
+
+  # prep distance data to plot
+  # long format of dist matrix
+  toplo <- dis2 %>%
+    as.matrix %>%
+    as.data.frame %>%
+    rownames_to_column('station') %>%
+    gather('station2', 'dist', -station) %>%
+    arrange(dist) %>%
+    mutate(
+      dist = ifelse(station == station2, NA, dist)
+      )
+
+  # get site order levels based on clustering
+  sitfc <- clst2$labels[clst2$order]
+  toplo <- toplo %>%
+    mutate(
+      station = factor(station, levels = sitfc),
+      station2 = factor(station2, levels = sitfc)
+    )
+
+  # plot
+  p <- ggplot(toplo) +
+    geom_tile(aes(x = station, y = station2, fill = dist), colour = 'black') +
+    scale_x_discrete('', expand = c(0, 0)) +
+    scale_y_discrete('', expand = c(0, 0)) +
+    scale_fill_gradient2('Dissimilarity between stations\nby dissolution', low = 'lightblue', mid = 'white', high = 'tomato1', midpoint = 2) +
+    guides(fill = guide_colourbar(barheight = 0.5, barwidth = 10, label.theme = element_text(size = 11, angle = 0))) +
+    pbase
+
+  # index values of cluster cuts
+  brks <- clstgrps2 %>%
+    .[clst2$order] %>%
+    duplicated %>%
+    `!` %>%
+    which %>%
+    `-` (0.5) %>%
+    .[-1]
+
+  p <- p +
+    geom_vline(xintercept = brks, size = 1.5) +
+    geom_hline(yintercept = brks, size = 1.5) +
+    theme_bw(base_family = 'serif') +
+    theme(
+      legend.position = 'top',
+      legend.direction = 'horizontal'
+    )
+
+  return(p)
+
+}, height = 600, width = 700)
+```
+
+#### Map
+
+```{r}
+renderPlot({
+
+  # input
+  clst2 <- clst2()
+  clstgrps2 <- clstgrps2()
+
+  mapplo <- locs %>%
+    mutate(clstgrps2 = clstgrps2)
+
+  # plot the basemap
+  ggmap(bsmap) +
+    geom_point(data = mapplo, aes(x = lon, y = lat, fill = clstgrps2), pch = 21, size = 8, alpha = 0.7) +
+    geom_text(data = mapplo, aes(x = lon, y = lat, label = station)) +
+    scale_fill_viridis_c() +
+    theme_bw(base_family = 'serif') +
+    theme(
+      axis.title = element_blank(),
+      legend.position = 'none'
+      )
+
+}, height = 600, width = 400)
+```
