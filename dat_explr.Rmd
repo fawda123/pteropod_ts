@@ -101,12 +101,49 @@ renderPlot({
     stat_smooth(method = 'lm', se = F, colour = 'black') +
     geom_point(aes(fill = mo, group = station), pch = 21, size = 4) +
     facet_grid(~ cohortyr, scales = 'free') +
-    ylab(dis) +
-    xlab(chm) +
+    ylab(paste(val, chm)) +
+    xlab(paste(val, 'temp')) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(), 
       legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+```
+
+```{r}
+renderPlot({
+  
+  # inputs
+  chm <- input$chm
+  dis <- input$dis
+  val <- input$val
+
+  dat <- chmdat %>% 
+    filter(var %in% c(chm, 'temp')) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    gather('dissvar', 'dissval', typ1:typ3) %>% 
+    gather('chemvar', 'chemval', ave:max) %>% 
+    filter(dissvar %in% dis) %>% 
+    filter(chemvar %in% val) %>% 
+    spread(var, chemval)
+
+  p <- ggplot(dat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
+    geom_point(aes(fill = mo, group = station), pch = 21) +
+    facet_grid(~ cohortyr, scales = 'free') +
+    ylab(paste(val, chm)) +
+    xlab(paste(val, 'temp')) +
+    scale_size(paste(val, dis), range = c(1, 10)) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      # legend.title = element_blank(), 
       legend.position = 'top'
     )
 
