@@ -139,7 +139,7 @@ renderPlot({
     facet_grid(~ cohortyr, scales = 'free') +
     ylab(paste(val, chm)) +
     xlab(paste(val, 'temp')) +
-    scale_size(paste(val, dis), range = c(1, 10)) +
+    scale_size(paste(val, dis), range = c(2, 10)) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(), 
