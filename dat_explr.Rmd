@@ -105,7 +105,7 @@ renderPlot({
     geom_point(aes(fill = mo, group = station), pch = 21, size = 4) +
     facet_grid(~ cohortyr, scales = 'free') +
     ylab(paste(val, dis)) +
-    xlab(paste(val, 'temp')) +
+    xlab(paste(val, chm)) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(), 
