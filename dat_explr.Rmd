@@ -79,6 +79,9 @@ column(12,
 
 Year values shown correspond to "cohort-years" that begin in June with spring spawning, i.e., the April "cohort-year" is one year prior to the calendar year.  
 
+### Observed data
+
+The first set of plots show the selected pteropod response measure against the selected environmental measure observed at the time of sampling.  Plots are facetted by cohort-year with points in each facet colored by month. 
 ```{r}
 renderPlot({
   
@@ -101,8 +104,8 @@ renderPlot({
     stat_smooth(method = 'lm', se = F, colour = 'black') +
     geom_point(aes(fill = mo, group = station), pch = 21, size = 4) +
     facet_grid(~ cohortyr, scales = 'free') +
-    ylab(paste(val, chm)) +
-    xlab(paste(val, 'temp')) +
+    ylab(dis) +
+    xlab(paste(val, chm)) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(), 
@@ -116,6 +119,7 @@ renderPlot({
 
 ```
 
+The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. Plots are facetted by cohort-year with points in each facet colored by month. 
 ```{r}
 renderPlot({
   
@@ -136,23 +140,29 @@ renderPlot({
 
   p <- ggplot(dat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
     geom_point(aes(fill = mo, group = station), pch = 21) +
+    stat_smooth(method = 'lm', se = F, colour = 'black') +
     facet_grid(~ cohortyr, scales = 'free') +
     ylab(paste(val, chm)) +
     xlab(paste(val, 'temp')) +
-    scale_size(paste(val, dis), range = c(2, 10)) +
+    scale_size(dis, range = c(2, 10)) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(), 
       # legend.title = element_blank(), 
       legend.position = 'top'
-    )
+    ) + 
+    guides(
+      fill = guide_legend('', override.aes = list(size = 4)),
+      size = guide_legend(override.aes = list(linetype = 0))
+      )
 
   return(p)
   
-}, height = 300, width = 850)
+}, height = 315, width = 850)
 
 ```
 
+The third set of plots show the selected pteropod response measure and selected environmental measure collected over time with facets for each station.  Points are joined within cohort-years and colored by month. The red line in the right plot shows a saturation state equal to one when aragonite is selected.
 ```{r}
 renderPlot({
   
