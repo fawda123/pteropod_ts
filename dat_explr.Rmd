@@ -360,7 +360,7 @@ renderPlot({
     xlab('Cumulative stress magnitude') +
     ylab(dis) +
     facet_wrap(~cohortyr) +
-    theme_bw(base_family = 'serif', base_size = 18) + 
+    theme_bw(base_family = 'serif', base_size = 16) + 
     theme(
       legend.position = 'top', 
       legend.title = element_blank()
@@ -371,7 +371,7 @@ renderPlot({
     geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.2, height = 0.2) +
     ylab('Cumulative stress magnitude') +
     facet_wrap(~cohortyr) +
-    theme_bw(base_family = 'serif', base_size = 18) + 
+    theme_bw(base_family = 'serif', base_size = 16) + 
     theme(
       axis.title.x = element_blank(), 
       legend.position = 'top'
@@ -381,6 +381,6 @@ renderPlot({
   
   p1 + p2 + plot_layout(ncol = 1, heights = c(1, 1))
 
-}, height = 600, width = 750)
+}, height = 600, width = 850)
   
 ```
