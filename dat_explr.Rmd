@@ -20,7 +20,6 @@ library(lubridate)
 
 data(chmdat)
 data(biodat)
-data(simdat)
 
 # pteropod birthday
 strt <- '2008-06-01' %>% 
@@ -56,9 +55,15 @@ biodatagg <- biodat %>%
   mutate(
     datetime = paste('2008', as.numeric(mo), '15 00:00', sep = '-'),
     datetime = as.POSIXct(datetime, tz = 'UTC'),
-    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr')), 
+    # mo = factor(mo, levels = c('Jul', 'Sep', 'Apr')), 
     station = as.character(station)
   ) 
+
+# make cohortyr an ordered factor
+biodat <- biodat %>% 
+  mutate(cohortyr = factor(cohortyr, ordered = T))
+chmdat <- chmdat %>% 
+  mutate(cohortyr = factor(cohortyr, ordered = T))
 ```
 
 ```{r}
@@ -79,7 +84,9 @@ column(12,
 
 Year values shown correspond to "cohort-years" that begin in June with spring spawning, i.e., the April "cohort-year" is one year prior to the calendar year.  
 
-### Observed data
+## Observed data {.tabset}
+
+### Grouped by year
 
 The first set of plots show the selected pteropod response measure against the selected environmental measure observed at the time of sampling.  Plots are facetted by cohort-year with points in each facet colored by month. 
 ```{r}
@@ -119,14 +126,21 @@ renderPlot({
 
 ```
 
-The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. Plots are facetted by cohort-year with points in each facet colored by month. 
+The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. The x-axis is alway temperature and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by month. 
 ```{r}
+column(12, 
+  column(4, 
+    selectInput('tmp', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max'))
+  )
+)
+
 renderPlot({
   
   # inputs
   chm <- input$chm
   dis <- input$dis
   val <- input$val
+  tmp <- input$tmp
 
   dat <- chmdat %>% 
     filter(var %in% c(chm, 'temp')) %>% 
@@ -135,7 +149,8 @@ renderPlot({
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:max) %>% 
     filter(dissvar %in% dis) %>% 
-    filter(chemvar %in% val) %>% 
+    filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp) %>% 
+    select(-chemvar) %>% 
     spread(var, chemval)
 
   p <- ggplot(dat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
@@ -143,7 +158,7 @@ renderPlot({
     stat_smooth(method = 'lm', se = F, colour = 'black') +
     facet_grid(~ cohortyr, scales = 'free') +
     ylab(paste(val, chm)) +
-    xlab(paste(val, 'temp')) +
+    xlab(paste(tmp, 'temp')) +
     scale_size(dis, range = c(2, 10)) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
@@ -161,6 +176,99 @@ renderPlot({
 }, height = 315, width = 850)
 
 ```
+
+### Grouped by season
+
+The first set of plots show the selected pteropod response measure against the selected environmental measure observed at the time of sampling.  Plots are facetted by cohort-year with points in each facet colored by cohort year. 
+```{r}
+renderPlot({
+  
+  # inputs
+  chm <- input$chm
+  dis <- input$dis
+  val <- input$val
+  
+  dat <- chmdat %>% 
+    filter(var %in% chm) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
+    gather('dissvar', 'dissval', typ1:typ3) %>% 
+    gather('chemvar', 'chemval', ave:max) %>% 
+    filter(dissvar %in% dis) %>% 
+    filter(chemvar %in% val)
+
+  p <- ggplot(dat, aes(x = chemval, y = dissval)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'black') +
+    geom_point(aes(fill = factor(cohortyr), group = station), pch = 21, size = 4) +
+    facet_grid(~ mo, scales = 'free') +
+    ylab(dis) +
+    xlab(paste(val, chm)) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+```
+
+The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. The x-axis is alway temperature and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by cohort year. 
+```{r}
+column(12, 
+  column(4, 
+    selectInput('tmp2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max'))
+  )
+)
+
+renderPlot({
+  
+  # inputs
+  chm <- input$chm
+  dis <- input$dis
+  val <- input$val
+  tmp2 <- input$tmp2
+  
+  dat <- chmdat %>% 
+    filter(var %in% c(chm, 'temp')) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    gather('dissvar', 'dissval', typ1:typ3) %>% 
+    gather('chemvar', 'chemval', ave:max) %>% 
+    filter(dissvar %in% dis) %>% 
+    filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp2) %>% 
+    select(-chemvar) %>% 
+    spread(var, chemval)
+
+  p <- ggplot(dat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
+    geom_point(aes(fill = factor(cohortyr), group = station), pch = 21) +
+    stat_smooth(method = 'lm', se = F, colour = 'black') +
+    facet_grid(~ mo, scales = 'free') +
+    ylab(paste(val, chm)) +
+    xlab(paste(tmp2, 'temp')) +
+    scale_size(dis, range = c(2, 10)) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      # legend.title = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    guides(
+      fill = guide_legend('', override.aes = list(size = 4)),
+      size = guide_legend(override.aes = list(linetype = 0))
+      )
+
+  return(p)
+  
+}, height = 315, width = 850)
+
+```
+
+### Observed data, time series
 
 The third set of plots show the selected pteropod response measure and selected environmental measure collected over time with facets for each station.  Points are joined within cohort-years and colored by month. The red line in the right plot shows a saturation state equal to one when aragonite is selected.
 ```{r}
@@ -225,7 +333,7 @@ renderPlot({
 }, height = 900, width = 900)
 ```
 
-### Evaluating cumulative stress
+## Evaluating cumulative stress
 
 Within each cohort year, the "cumulative stress" as the duration of time was estimated at which under-saturation of aragonite occcurred.  This was calculated two ways.  First, the number of times a sampling period was under-saturated was counted for all of the sampling months in a cohort-year.  This produced an estimate of total stress within a cohort-year as a count measure from zero to three, where zero meant that none of the sampling periods were under-saturated and three meant all were under-saturated.  Second, the number of times that July and September sampling events were under-saturated were counted as a measure of prior cumulative stress for the April sampling event.  This produced an estimate of cumulative stress as a count measure varying from zero to two.  For both cases, the amount of type 3 dissolution that was observed in April (i.e., mature adults at the end of a cohort-year) was used as a response to the cumulative stress measure.  
 

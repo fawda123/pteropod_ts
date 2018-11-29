@@ -20,7 +20,8 @@ biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodDa
   mutate(
     station = gsub('^P', '', station), 
     station = as.numeric(station),
-    mo = month(mo, label = T), 
+    mo = month(mo, label = T),
+    # mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'), ordered = T),
     dy = 15,
     cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr)
   ) %>% 
@@ -80,7 +81,8 @@ chmdat <- chmdat %>%
       yr == 2014 & mo == 10 ~ 9,
       TRUE ~ mo
     ),
-    mo = month(mo, label = T)
+    mo = month(mo, label = T)#, 
+    # mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'), ordered = T)
   ) %>% 
   group_by(yr, mo, station, lon, lat, var) %>% 
   summarise(
