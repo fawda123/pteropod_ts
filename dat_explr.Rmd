@@ -17,6 +17,7 @@ library(shiny)
 library(gridExtra)
 library(glue)
 library(lubridate)
+library(patchwork)
 
 data(chmdat)
 data(biodat)
@@ -24,23 +25,6 @@ data(biodat)
 # pteropod birthday
 strt <- '2008-06-01' %>% 
   as.Date
-
-# aggregated biological data to match with sim data
-# 2014 and 2015 averaged by month
-biodatagg <- biodat %>% 
-  filter(cohortyr %in% c(2014, 2015)) %>% 
-  select(station, mo, typ1, typ2, typ3) %>% 
-  gather('var', 'val', -station, -mo) %>% 
-  group_by(station, mo, var) %>% 
-  summarise(val = mean(val, na.rm = T)) %>% 
-  spread(var, val) %>% 
-  ungroup %>% 
-  mutate(
-    datetime = paste('2008', as.numeric(mo), '15 00:00', sep = '-'),
-    datetime = as.POSIXct(datetime, tz = 'UTC'),
-    # mo = factor(mo, levels = c('Jul', 'Sep', 'Apr')), 
-    station = as.character(station)
-  ) 
 
 # make cohortyr an ordered factor
 biodat <- biodat %>% 
@@ -60,14 +44,14 @@ column(12,
   ),
   
   column(4, 
-    selectInput('dis', 'Select dissolution:', choices = c('typ1', 'typ2', 'typ3'))
+    selectInput('dis', 'Select dissolution:', choices = c('typ1', 'typ2', 'typ3'), selected = 'typ3')
   )
 )
 ```
 
 Year values shown correspond to "cohort-years" that begin in June with spring spawning, i.e., the April "cohort-year" is one year prior to the calendar year.  
 
-## Observed data {.tabset}
+## {.tabset}
 
 ### Grouped by year
 
@@ -251,9 +235,20 @@ renderPlot({
 
 ```
 
-### Observed data, time series
+### By station and cumulative stress {.tabset .tabset-pills}
 
-The third set of plots show the selected pteropod response measure and selected environmental measure collected over time with facets for each station.  Points are joined within cohort-years and colored by month. The red line in the right plot shows a saturation state equal to one when aragonite is selected.
+```{r}
+column(12, 
+       
+       column(4, numericInput('thrsh', 'Under-saturation threshold:', value = 1, min = 0, max = 5, step = 0.05))
+       
+       )
+```
+
+#### By station
+
+These plots show the selected pteropod response measure and selected environmental measure collected over time with facets for each station.  Points are joined within cohort-years and colored by month. The red line in the right plot shows a saturation state equal to one when aragonite is selected.
+
 ```{r}
 renderPlot({
   
@@ -261,6 +256,8 @@ renderPlot({
   dis <- input$dis
   chm <- input$chm
   val <- input$val
+  thrsh <- input$thrsh
+  strdat <- strdat()
   
   # bio
   toplo1 <- biodat %>% 
@@ -309,57 +306,39 @@ renderPlot({
   # add 1 horizontal or aragonite
   if(chm == 'ara')
     p2 <- p2 + 
-      geom_hline(yintercept = 1, colour = 'tomato1', size = 1, alpha = 0.7)
+      geom_hline(yintercept = thrsh, colour = 'tomato1', size = 1, alpha = 0.7) +
+      geom_text(data = strdat, aes(y = thrsh, label = strsval), colour = 'tomato1', vjust = 1, hjust = 0)
   
   grid.arrange(p1, p2, ncol = 2)
   
 }, height = 900, width = 900)
 ```
 
-## Evaluating cumulative stress
+#### Evaluating cumulative stress
 
-Within each cohort year, the "cumulative stress" as the duration of time was estimated at which under-saturation of aragonite occcurred.  This was calculated two ways.  First, the number of times a sampling period was under-saturated was counted for all of the sampling months in a cohort-year.  This produced an estimate of total stress within a cohort-year as a count measure from zero to three, where zero meant that none of the sampling periods were under-saturated and three meant all were under-saturated.  Second, the number of times that July and September sampling events were under-saturated were counted as a measure of prior cumulative stress for the April sampling event.  This produced an estimate of cumulative stress as a count measure varying from zero to two.  For both cases, the amount of type 3 dissolution that was observed in April (i.e., mature adults at the end of a cohort-year) was used as a response to the cumulative stress measure.  
-
-The analysis also considered what was defined as cumulative stress in addition to duration.  In other words, cumulative stress could be measured using the average aragonite saturation in a sampling month at a station, the minimum saturation, or the maximum saturation.  Additionally, what defines over- and under-saturation was also considered.  Typically, values less than one are considered undefr-saturated but this value could be changed as a measure of specificity to which individuals may show differential response.  The results below can be assessed in consideration of the above.  
-
-```{r}
-column(12, 
-       
-       column(4, selectInput('araval', 'Select aragonite value:', choices = c('min', 'ave', 'max'))),
-       
-       column(4, selectInput('strmsr', 'Select stress measure:', choices = list(total = 'totstr', cumulative = 'cumstr'))),
-       
-       column(4, numericInput('thrsh', 'Under-saturation threshold:', value = 1, min = 0, max = 5, step = 0.1))
-       
-       )
-```
+Within each cohort year, the "cumulative stress" was estimated as the duration of time within a cohort year when under-saturation of aragonite occcurred.  The number of times a sampling period was under-saturated was counted for all of the sampling months in a cohort-year.  This produced an estimate of total stress within a cohort-year as the cumulative measure from zero to three, where zero meant that none of the sampling periods were under-saturated and three meant all were under-saturated.  The cumulative stress counts assigned to each station and cohort year can be viewed in the first tab.
 
 ```{r}
 strdat <- reactive({
 
   # inputs
-  araval <- input$araval
-  strmsr <- input$strmsr
+  val <- input$val
   thrsh <- input$thrsh
 
-  dat <- chmdat %>% 
+  out <- chmdat %>% 
     filter(var %in% 'ara') %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
-    gather('ara', 'val', ave:max) %>% 
-    filter(ara %in% araval) %>% 
-    mutate(aracat = ifelse(val < thrsh, 'under', 'over')) %>% 
-    group_by(cohortyr, station) %>% 
+    gather('ara', 'chmval', ave:max) %>% 
+    filter(ara %in% val) %>% 
+    mutate(aracat = ifelse(chmval < thrsh, 'under', 'over')) %>% 
+    unite('costa', cohortyr, station, remove = F) %>% 
+    group_by(costa) %>% 
     mutate(
-      cumstr = sum(aracat[!mo %in% 'Apr'] %in% 'under'),
-      totstr = sum(aracat %in% 'under')
-      ) %>% 
-    filter(mo %in% 'Apr') %>% 
-    select(-aracat)
+      strsval = cumsum(aracat %in% 'under')
+    ) 
 
-  names(dat)[names(dat) %in% strmsr] <- 'strsval'
-  
-  return(dat)
+  return(out)
   
 })
 
@@ -367,14 +346,41 @@ renderPlot({
   
   # input
   strdat <- strdat()
-  
-  ggplot(strdat, aes(x = factor(strsval), y = typ3)) +
-    geom_boxplot() +
-    scale_x_discrete('Cumulative stress magnitude') +
-    scale_y_continuous('End of cohort-year (April) type 3') +
-    theme_bw(base_family = 'serif', base_size = 18) +
-    facet_wrap(~cohortyr, ncol = 2) 
+  dis <- input$dis
 
-}, height = 400, width = 750)
+  # rename pteropod response measure to generic
+  toplo <- strdat %>% 
+    rename(
+      rsp = !!dis
+    )
+  
+  p1 <- ggplot(toplo, aes(x = strsval, y = rsp, group = costa)) +
+    geom_line() +
+    geom_point(aes(fill = mo), pch = 21, size = 4) +
+    xlab('Cumulative stress magnitude') +
+    ylab(dis) +
+    facet_wrap(~cohortyr) +
+    theme_bw(base_family = 'serif', base_size = 18) + 
+    theme(
+      legend.position = 'top', 
+      legend.title = element_blank()
+    )
+  
+  p2 <- ggplot(toplo, aes(x = mo, y = strsval, group = costa)) +
+    geom_line() +
+    geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.2, height = 0.2) +
+    ylab('Cumulative stress magnitude') +
+    facet_wrap(~cohortyr) +
+    theme_bw(base_family = 'serif', base_size = 18) + 
+    theme(
+      axis.title.x = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    scale_size(dis) +
+    guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4)))
+  
+  p1 + p2 + plot_layout(ncol = 1, heights = c(1, 1))
+
+}, height = 600, width = 750)
   
 ```
