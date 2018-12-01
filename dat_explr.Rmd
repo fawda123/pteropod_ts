@@ -247,7 +247,7 @@ column(12,
 
 #### By station
 
-These plots show the selected pteropod response measure and selected environmental measure collected over time with facets for each station.  Points are joined within cohort-years and colored by month. The red line in the right plot shows a saturation state equal to one when aragonite is selected.
+These plots show the selected pteropod response measure and selected environmental measure collected over time with facets for each station.  Points are joined within cohort-years and colored by month. The red line in the right plot shows a saturation state equal to `r renderText({input$thrsh})` when aragonite is selected.
 
 ```{r}
 renderPlot({
