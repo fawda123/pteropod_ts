@@ -77,7 +77,7 @@ renderPlot({
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se = F, colour = 'black') +
     geom_point(aes(fill = mo, group = station), pch = 21, size = 4) +
-    facet_grid(~ cohortyr, scales = 'free') +
+    facet_grid(~ cohortyr) + #, scales = 'free') +
     ylab(dis) +
     xlab(paste(val, chm)) +
     theme_bw(base_family = 'serif', base_size = 16) +
@@ -168,7 +168,7 @@ renderPlot({
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se = F, colour = 'black') +
     geom_point(aes(fill = factor(cohortyr), group = station), pch = 21, size = 4) +
-    facet_grid(~ mo, scales = 'free') +
+    facet_grid(~ mo) + #, scales = 'free') +
     ylab(dis) +
     xlab(paste(val, chm)) +
     theme_bw(base_family = 'serif', base_size = 16) +
