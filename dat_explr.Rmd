@@ -40,7 +40,7 @@ column(12,
   ),
   
   column(4, 
-    selectInput('val', 'Select chemistry value:', choices = c('min', 'ave', 'max'))
+    selectInput('val', 'Select chemistry value:', choices = c('min', 'ave', 'max', 'std'))
   ),
   
   column(4, 
@@ -69,7 +69,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:max) %>% 
+    gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
     filter(chemvar %in% val)
 
@@ -97,7 +97,7 @@ The second set of plots show the selected environmental measure against temperat
 ```{r}
 column(12, 
   column(4, 
-    selectInput('tmp', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max'))
+    selectInput('tmp', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std'))
   )
 )
 
@@ -114,7 +114,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:max) %>% 
+    gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
     filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp) %>% 
     select(-chemvar) %>% 
@@ -123,7 +123,7 @@ renderPlot({
   p <- ggplot(dat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
     geom_point(aes(fill = mo, group = station), pch = 21) +
     stat_smooth(method = 'lm', se = F, colour = 'black') +
-    facet_grid(~ cohortyr, scales = 'free') +
+    facet_grid(~ cohortyr) +
     ylab(paste(val, chm)) +
     xlab(paste(tmp, 'temp')) +
     scale_size(dis, range = c(2, 10)) +
@@ -160,7 +160,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:max) %>% 
+    gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
     filter(chemvar %in% val)
 
@@ -188,7 +188,7 @@ The second set of plots show the selected environmental measure against temperat
 ```{r}
 column(12, 
   column(4, 
-    selectInput('tmp2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max'))
+    selectInput('tmp2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std'))
   )
 )
 
@@ -205,7 +205,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:max) %>% 
+    gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
     filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp2) %>% 
     select(-chemvar) %>% 
@@ -214,7 +214,7 @@ renderPlot({
   p <- ggplot(dat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
     geom_point(aes(fill = factor(cohortyr), group = station), pch = 21) +
     stat_smooth(method = 'lm', se = F, colour = 'black') +
-    facet_grid(~ mo, scales = 'free') +
+    facet_grid(~ mo) +
     ylab(paste(val, chm)) +
     xlab(paste(tmp2, 'temp')) +
     scale_size(dis, range = c(2, 10)) +
@@ -284,7 +284,7 @@ renderPlot({
   # chem
   toplo2 <- chmdat %>% 
     filter(var %in% chm) %>% 
-    gather('estv', 'valv', ave:max) %>% 
+    gather('estv', 'valv', ave:std) %>% 
     filter(estv %in% val)
   
   p2 <- ggplot(toplo2, aes(x = factor(date), y = valv)) +
@@ -329,7 +329,7 @@ strdat <- reactive({
     filter(var %in% 'ara') %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
-    gather('ara', 'chmval', ave:max) %>% 
+    gather('ara', 'chmval', ave:std) %>% 
     filter(ara %in% val) %>% 
     mutate(aracat = ifelse(chmval < thrsh, 'under', 'over')) %>% 
     unite('costa', cohortyr, station, remove = F) %>% 

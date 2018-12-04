@@ -88,7 +88,8 @@ chmdat <- chmdat %>%
   summarise(
     ave = mean(val, na.rm = T),
     min = min(val, na.rm = T),
-    max = max(val, na.rm = T)
+    max = max(val, na.rm = T),
+    std = sd(val, na.rm = T)
   ) %>% 
   ungroup %>% 
   mutate(dy = 15) %>% 
