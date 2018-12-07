@@ -18,6 +18,7 @@ library(gridExtra)
 library(glue)
 library(lubridate)
 library(patchwork)
+library(shinyWidgets)
 
 data(chmdat)
 data(biodat)
@@ -33,6 +34,38 @@ chmdat <- chmdat %>%
   mutate(cohortyr = factor(cohortyr, ordered = T))
 ```
 
+```{r reactives}
+# cumulative stress data
+strdat <- reactive({
+
+  # inputs
+  val <- input$val
+  sta <- input$sta
+  thrsh <- input$thrsh
+
+  out <- chmdat %>% 
+    filter(var %in% 'ara') %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
+    gather('ara', 'chmval', ave:std) %>% 
+    filter(ara %in% val) %>% 
+    filter(station %in% sta) %>% 
+    mutate(
+      aracat = ifelse(chmval < thrsh, 1, 0),
+      aradff = pmax(0, thrsh - chmval)
+      ) %>% 
+    unite('costa', cohortyr, station, remove = F) %>% 
+    group_by(costa) %>% 
+    mutate(
+      strsdis = cumsum(aracat),
+      strscnt = cumsum(aradff)
+    ) 
+
+  return(out)
+  
+})
+```
+
 ```{r}
 column(12, 
   column(4, 
@@ -46,6 +79,14 @@ column(12,
   column(4, 
     selectInput('dis', 'Select dissolution:', choices = c('typ1', 'typ2', 'typ3'), selected = 'typ3')
   )
+)
+column(12, 
+  column(4, 
+  
+    pickerInput(inputId = "sta", label = 'Select stations:', choices = unique(chmdat$station),
+      options = list(`actions-box` = TRUE, size = 20), selected = unique(chmdat$station), multiple = TRUE)    
+              
+  )       
 )
 ```
 
@@ -63,6 +104,8 @@ renderPlot({
   chm <- input$chm
   dis <- input$dis
   val <- input$val
+  sta <- input$sta
+  
   
   dat <- chmdat %>% 
     filter(var %in% chm) %>% 
@@ -71,7 +114,8 @@ renderPlot({
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
-    filter(chemvar %in% val)
+    filter(chemvar %in% val) %>% 
+    filter(station %in% sta)
 
   p <- ggplot(dat, aes(x = chemval, y = dissval)) +
     # geom_line(aes(group = station), colour = 'grey') +
@@ -108,6 +152,7 @@ renderPlot({
   dis <- input$dis
   val <- input$val
   tmp <- input$tmp
+  sta <- input$sta
 
   dat <- chmdat %>% 
     filter(var %in% c(chm, 'temp')) %>% 
@@ -116,7 +161,8 @@ renderPlot({
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
-    filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp) %>% 
+    filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp) %>%
+    filter(station %in% sta) %>% 
     select(-chemvar) %>% 
     spread(var, chemval)
 
@@ -154,6 +200,7 @@ renderPlot({
   chm <- input$chm
   dis <- input$dis
   val <- input$val
+  sta <- input$sta
   
   dat <- chmdat %>% 
     filter(var %in% chm) %>% 
@@ -162,7 +209,8 @@ renderPlot({
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
-    filter(chemvar %in% val)
+    filter(chemvar %in% val) %>%
+    filter(station %in% sta) 
 
   p <- ggplot(dat, aes(x = chemval, y = dissval)) +
     # geom_line(aes(group = station), colour = 'grey') +
@@ -198,6 +246,7 @@ renderPlot({
   chm <- input$chm
   dis <- input$dis
   val <- input$val
+  sta <- input$sta
   tmp2 <- input$tmp2
   
   dat <- chmdat %>% 
@@ -207,6 +256,7 @@ renderPlot({
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:std) %>% 
     filter(dissvar %in% dis) %>% 
+    filter(station %in% sta) %>% 
     filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp2) %>% 
     select(-chemvar) %>% 
     spread(var, chemval)
@@ -256,6 +306,7 @@ renderPlot({
   dis <- input$dis
   chm <- input$chm
   val <- input$val
+  sta <- input$sta
   thrsh <- input$thrsh
   strdat <- strdat()
   
@@ -263,7 +314,8 @@ renderPlot({
   toplo1 <- biodat %>% 
     select(date, yr, cohortyr, mo, station, typ1, typ2, typ3) %>% 
     gather('diss', 'val', typ1:typ3) %>% 
-    filter(diss %in% dis)
+    filter(diss %in% dis) %>% 
+    filter(station %in% sta)
   
   p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
     geom_line(aes(group = cohortyr)) +
@@ -285,7 +337,8 @@ renderPlot({
   toplo2 <- chmdat %>% 
     filter(var %in% chm) %>% 
     gather('estv', 'valv', ave:std) %>% 
-    filter(estv %in% val)
+    filter(estv %in% val) %>% 
+    filter(station %in% sta)
   
   p2 <- ggplot(toplo2, aes(x = factor(date), y = valv)) +
     geom_line(aes(group = cohortyr)) +
@@ -307,40 +360,18 @@ renderPlot({
   if(chm == 'ara')
     p2 <- p2 + 
       geom_hline(yintercept = thrsh, colour = 'tomato1', size = 1, alpha = 0.7) +
-      geom_text(data = strdat, aes(y = thrsh, label = strsval), colour = 'tomato1', vjust = 1, hjust = 0)
+      geom_text(data = strdat, aes(y = thrsh, label = paste(strsdis, round(strscnt, 1), sep = ', ')), colour = 'tomato1', vjust = 1, hjust = 0)
   
   grid.arrange(p1, p2, ncol = 2)
   
 }, height = 900, width = 900)
 ```
 
-#### Evaluating cumulative stress
+#### Evaluating cumulative stress, discrete
 
-Within each cohort year, the "cumulative stress" was estimated as the duration of time within a cohort year when under-saturation of aragonite occcurred.  The number of times a sampling period was under-saturated was counted for all of the sampling months in a cohort-year.  This produced an estimate of total stress within a cohort-year as the cumulative measure from zero to three, where zero meant that none of the sampling periods were under-saturated and three meant all were under-saturated.  The cumulative stress counts assigned to each station and cohort year can be viewed in the first tab.
+Within each cohort year, the "cumulative stress" was estimated as the duration of time within a cohort year when under-saturation of aragonite occcurred.  For "discrete stress", the number of times a sampling period was under-saturated was counted for all of the sampling months in a cohort-year.  This produced an estimate of total stress within a cohort-year as the cumulative measure from zero to three, where zero meant that none of the sampling periods were under-saturated and three meant all were under-saturated.  The cumulative stress counts assigned to each station and cohort year can be viewed in the first tab.
 
 ```{r}
-strdat <- reactive({
-
-  # inputs
-  val <- input$val
-  thrsh <- input$thrsh
-
-  out <- chmdat %>% 
-    filter(var %in% 'ara') %>% 
-    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
-    gather('ara', 'chmval', ave:std) %>% 
-    filter(ara %in% val) %>% 
-    mutate(aracat = ifelse(chmval < thrsh, 'under', 'over')) %>% 
-    unite('costa', cohortyr, station, remove = F) %>% 
-    group_by(costa) %>% 
-    mutate(
-      strsval = cumsum(aracat %in% 'under')
-    ) 
-
-  return(out)
-  
-})
 
 renderPlot({
   
@@ -354,9 +385,10 @@ renderPlot({
       rsp = !!dis
     )
   
-  p1 <- ggplot(toplo, aes(x = strsval, y = rsp, group = costa)) +
-    geom_line() +
-    geom_point(aes(fill = mo), pch = 21, size = 4) +
+  p1 <- ggplot(toplo, aes(x = strsdis, y = rsp)) +
+    geom_line(aes(group = costa)) +
+    geom_point(aes(fill = mo, group = costa), pch = 21, size = 4) +
+    geom_smooth(method = 'lm', colour = 'black') +
     xlab('Cumulative stress magnitude') +
     ylab(dis) +
     facet_wrap(~cohortyr) +
@@ -366,9 +398,58 @@ renderPlot({
       legend.title = element_blank()
     )
   
-  p2 <- ggplot(toplo, aes(x = mo, y = strsval, group = costa)) +
+  p2 <- ggplot(toplo, aes(x = mo, y = strsdis, group = costa)) +
     geom_line() +
-    geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.2, height = 0.2) +
+    geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.1, height = 0.1) +
+    ylab('Cumulative stress magnitude') +
+    facet_wrap(~cohortyr) +
+    theme_bw(base_family = 'serif', base_size = 16) + 
+    theme(
+      axis.title.x = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    scale_size(dis) +
+    guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4)))
+  
+  p1 + p2 + plot_layout(ncol = 1, heights = c(1, 1))
+
+}, height = 600, width = 850)
+  
+```
+
+#### Evaluating cumulative stress, continuous
+
+Within each cohort year, the "cumulative stress" was estimated as the duration of time within a cohort year when under-saturation of aragonite occcurred.  For "continuous stress", the difference between measured aragonite saturation and the selected under-saturation was used as measure of cumulative stress in a cohort-year.  This produced an estimate of total stress within a cohort-year as the total sum of the difference.  The cumulative stress counts assigned to each station and cohort year can be viewed in the first tab.
+
+```{r}
+renderPlot({
+  
+  # input
+  strdat <- strdat()
+  dis <- input$dis
+
+  # rename pteropod response measure to generic
+  toplo <- strdat %>% 
+    rename(
+      rsp = !!dis
+    )
+  
+  p1 <- ggplot(toplo, aes(x = strscnt, y = rsp)) +
+    geom_line(aes(group = costa)) +
+    geom_point(aes(fill = mo, gruop = costa), pch = 21, size = 4) +
+    geom_smooth(method = 'lm', colour = 'black') +
+    xlab('Cumulative stress magnitude') +
+    ylab(dis) +
+    facet_wrap(~cohortyr) +
+    theme_bw(base_family = 'serif', base_size = 16) + 
+    theme(
+      legend.position = 'top', 
+      legend.title = element_blank()
+    )
+  
+  p2 <- ggplot(toplo, aes(x = mo, y = strscnt, group = costa)) +
+    geom_line() +
+    geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.1, height = 0.1) +
     ylab('Cumulative stress magnitude') +
     facet_wrap(~cohortyr) +
     theme_bw(base_family = 'serif', base_size = 16) + 
