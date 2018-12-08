@@ -331,7 +331,7 @@ renderPlot({
       legend.position = 'top'
       ) +
     ylab(dis) + 
-    scale_x_discrete(labels = format(unique(toplo1$date), '%Y-%m'))
+    scale_x_discrete(labels = format(sort(unique(toplo1$date)), '%Y-%m'))
   
   # chem
   toplo2 <- chmdat %>% 
@@ -354,7 +354,7 @@ renderPlot({
       legend.position = 'top'
       ) +
     ylab(chm) + 
-    scale_x_discrete(labels = format(unique(toplo2$date), '%Y-%m'))
+    scale_x_discrete(labels = format(sort(unique(toplo2$date)), '%Y-%m'))
 
   # add 1 horizontal or aragonite
   if(chm == 'ara')
