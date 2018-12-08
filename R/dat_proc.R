@@ -34,8 +34,10 @@ save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
 ##
 # in situ chemdat
-chmdat <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
-  select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, CTDSAL_PSS78,
+# fix dates to month, year events to match with bio
+# October in 2014 was averaged with september because of missing sep data at some stations
+chmdatall <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
+  select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, `DEPTH (M)`, CTDTMP_DEG_C_ITS90, CTDSAL_PSS78,
          CTDOXY_UMOL_KG_ADJ, `NITRATE umol_kg`, `NITRITE umol_kg`, `AMMONIA umol_kg`, `PHOSPHATE umol_kg`, 
          `SILICATE umol_kg`, `Ph Total in situ`, `pCO2 uatm`, `CO3-- umol/kg`, `Omega Ar`, Revelle) %>% 
   rename(
@@ -43,6 +45,7 @@ chmdat <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA',
     station = STATION_NO,
     lat = LATITUDE_DEC,
     lon = LONGITUDE_DEC,
+    depth = `DEPTH (M)`,
     niskin = NISKIN_NO,
     temp = CTDTMP_DEG_C_ITS90,
     sal = CTDSAL_PSS78,
@@ -65,16 +68,10 @@ chmdat <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA',
   group_by(station) %>% 
   mutate(
     lat = mean(lat), 
-    lon = mean(lon)
-  ) 
-
-# fix dates to month, year events to match with bio
-# October in 2014 was averaged with september because of missing sep data at some stations
-chmdat <- chmdat %>% 
-  mutate(
+    lon = mean(lon),
     yr = year(date), 
     mo = month(date)
-    ) %>% 
+  ) %>% 
   filter(mo %in% c(4, 7, 9, 10)) %>%
   mutate(
     mo = case_when(
@@ -83,7 +80,25 @@ chmdat <- chmdat %>%
     ),
     mo = month(mo, label = T), 
     mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'), ordered = T)
+  )
+
+# raw chemistry data for profile plots
+chmdatraw <- chmdatall %>% 
+  mutate(dy = 15) %>% 
+  unite('date', yr, mo, dy, sep = '-', remove = F) %>% 
+  mutate(
+    date = ymd(date),
+    cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr)
   ) %>% 
+  select(-dy) %>% 
+  select(date, yr, cohortyr, mo, station, lon, lat, everything())
+
+save(chmdatraw, file = 'data/chmdatraw.RData', compress = 'xz')
+
+# summarized chemistry data for analyses
+# fix dates to month, year events to match with bio
+# October in 2014 was averaged with september because of missing sep data at some stations
+chmdatsum <- chmdatall %>% 
   group_by(yr, mo, station, lon, lat, var) %>% 
   summarise(
     ave = mean(val, na.rm = T),
@@ -101,7 +116,7 @@ chmdat <- chmdat %>%
   select(-dy) %>% 
   select(date, yr, cohortyr, mo, station, lon, lat, everything())
 
-save(chmdat, file = 'data/chmdat.RData', compress = 'xz')
+save(chmdatsum, file = 'data/chmdatsum.RData', compress = 'xz')
 
 ##
 # simulated chemistry, 2008 
