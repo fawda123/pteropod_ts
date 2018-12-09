@@ -20,7 +20,8 @@ library(lubridate)
 library(patchwork)
 library(shinyWidgets)
 
-data(chmdat)
+data(chmdatsum)
+data(chmdatraw)
 data(biodat)
 
 # pteropod birthday
@@ -30,7 +31,7 @@ strt <- '2008-06-01' %>%
 # make cohortyr an ordered factor
 biodat <- biodat %>% 
   mutate(cohortyr = factor(cohortyr, ordered = T))
-chmdat <- chmdat %>% 
+chmdatsum <- chmdatsum %>% 
   mutate(cohortyr = factor(cohortyr, ordered = T))
 ```
 
@@ -43,7 +44,7 @@ strdat <- reactive({
   sta <- input$sta
   thrsh <- input$thrsh
 
-  out <- chmdat %>% 
+  out <- chmdatsum %>% 
     filter(var %in% 'ara') %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
@@ -83,8 +84,8 @@ column(12,
 column(12, 
   column(4, 
   
-    pickerInput(inputId = "sta", label = 'Select stations:', choices = unique(chmdat$station),
-      options = list(`actions-box` = TRUE, size = 20), selected = unique(chmdat$station), multiple = TRUE)    
+    pickerInput(inputId = "sta", label = 'Select stations:', choices = unique(chmdatsum$station),
+      options = list(`actions-box` = TRUE, size = 20), selected = unique(chmdatsum$station), multiple = TRUE)    
               
   )       
 )
@@ -107,7 +108,7 @@ renderPlot({
   sta <- input$sta
   
   
-  dat <- chmdat %>% 
+  dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
@@ -154,7 +155,7 @@ renderPlot({
   tmp <- input$tmp
   sta <- input$sta
 
-  dat <- chmdat %>% 
+  dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'temp')) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
@@ -202,7 +203,7 @@ renderPlot({
   val <- input$val
   sta <- input$sta
   
-  dat <- chmdat %>% 
+  dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
@@ -249,7 +250,7 @@ renderPlot({
   sta <- input$sta
   tmp2 <- input$tmp2
   
-  dat <- chmdat %>% 
+  dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'temp')) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
@@ -295,7 +296,62 @@ column(12,
        )
 ```
 
-#### By station
+#### By station, profile plots
+
+```{r}
+column(12, 
+       
+       column(4, selectInput('frscl', 'Free y-scale:', choices = c(TRUE, FALSE)))
+       
+       )
+renderPlot({
+  
+  # input 
+  chm <- input$chm
+  sta <- input$sta
+  frscl <- input$frscl
+  
+  # date levels, labels
+  dtlev <- as.character(sort(unique(chmdatraw$date)))
+  dtlab <- as.character(format(unique(chmdatraw$date), '%Y-%m'))
+
+  # chemistry raw data
+  toplo <- chmdatraw %>% 
+    filter(var %in% chm) %>% 
+    filter(station %in% sta) %>% 
+    mutate(
+      date = factor(date, levels = dtlev, labels = dtlab)
+    ) %>% 
+    filter(!is.na(val)) %>% 
+    group_by(date, mo, station, depth, var) %>% 
+    summarise(val = mean(val))
+
+  p1 <- ggplot(toplo, aes(x = val, y = -depth)) +
+      geom_path() + 
+      geom_point(aes(fill = mo), pch = 21, colour = 'black', size = 4) + 
+      ylab('Depth') +
+      xlab(chm) + 
+      theme_bw(base_family = 'serif', base_size = 14) +
+      theme(
+        strip.background = element_blank(), 
+        legend.title = element_blank(),
+        # axis.text.x  = element_text(size = 10, angle = 45, hjust = 1),
+        legend.position = 'top'
+        ) 
+  
+  if(frscl)
+    p1 <- p1 + 
+      facet_grid(station~date, scales = 'free_y')
+  else 
+    p1 <- p1 + 
+      facet_grid(station~date)
+  
+  return(p1)
+
+}, height = 800, width = 900)
+```
+
+#### By station, response and environment
 
 These plots show the selected pteropod response measure and selected environmental measure collected over time with facets for each station.  Points are joined within cohort-years and colored by month. The red line in the right plot shows a saturation state equal to `r renderText({input$thrsh})` when aragonite is selected.
 
@@ -334,7 +390,7 @@ renderPlot({
     scale_x_discrete(labels = format(sort(unique(toplo1$date)), '%Y-%m'))
   
   # chem
-  toplo2 <- chmdat %>% 
+  toplo2 <- chmdatsum %>% 
     filter(var %in% chm) %>% 
     gather('estv', 'valv', ave:std) %>% 
     filter(estv %in% val) %>% 
