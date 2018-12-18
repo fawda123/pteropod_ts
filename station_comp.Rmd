@@ -26,11 +26,11 @@ library(mapview)
 library(shiny)
 
 load(file = 'data/biodat.RData')
-load(file = 'data/chmdat.RData')
+load(file = 'data/chmdatsum.RData')
 ```
 
 ```{r, fig.height = 6, fig.width = 4}
-locs <- chmdat %>% 
+locs <- chmdatsum %>% 
   select(station, lon, lat) %>% 
   unique 
 
