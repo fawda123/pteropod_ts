@@ -1,8 +1,8 @@
 # README
 
-Materials for Pteropod time series analysis, [link](http://162.243.131.102:3838/pteropod_ts/dat_explr.Rmd)
+Materials for Pteropod time series analysis, [link](http://sccwrp.shinyapps.io/pteropod_ts/dat_explr.Rmd)
 
-Station comparisons, [link](http://162.243.131.102:3838/pteropod_ts/station_comp.Rmd)
+Station comparisons, [link](http://sccwrp.shinyapps.io/pteropod_ts/station_comp.Rmd)
 
 ## Data summary
 
