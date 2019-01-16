@@ -7,7 +7,7 @@ self_contained: yes
 runtime: shiny
 ---
 
-# Station similarities, between years
+# Station similarities, within years
 
 ```{r, echo = F, warning = F, message = F}
 knitr::opts_chunk$set(echo = F, warning = F, message = F)
@@ -54,9 +54,10 @@ Select either water quality or dissolution data for the plots and clustering ana
 
 ## Water quality 
 
-### Monthly averages by water chemistry {.tabset}
+### Annual averages by water chemistry {.tabset}
 
-The plots below show averages for salinity, temperature, and omega across years for the same month.  Points are sized by magnitude of the average and colored with transparency for the standard deviation of the estimates.  
+The plots below show averages for salinity, temperature, and omega across months for the same year.  Points are sized by magnitude of the average and colored with transparency for the standard deviation of the estimates.  
+
 ```{r}
 toplo1a <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
@@ -91,21 +92,14 @@ toplo1a <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA'
     mo = month(mo, label = T)
   )
 
-# ggplot(toplo, aes(x = factor(station), y = val, fill = factor(yr))) + 
-#   geom_boxplot(position = 'dodge') +
-#   facet_grid(var ~ mo, scales = 'free_y')
-
-# average across years by month
+# average across months by year
 toplo1b <- toplo1a %>% 
-  group_by(station, var, mo, lat, lon) %>% 
+  group_by(station, var, yr, lat, lon) %>% 
   summarise(
     valmn = mean(val, na.rm = T),
     valsd = sd(val, na.rm = T)
   ) %>% 
-  ungroup %>% 
-  mutate(
-    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'))
-  )
+  ungroup
 
 pbase <- theme_bw(base_size = 14, base_family = 'serif') + 
   theme(
@@ -125,7 +119,7 @@ p1 <- ggmap(bsmap) +
   scale_size('Salinity (ave)', range = c(1, 10)) +
   scale_alpha('Salinity (sd)') +
   coord_map() + 
-  facet_wrap(~mo) + 
+  facet_wrap(~yr) + 
   pbase +
   guides(alpha = guide_legend(override.aes = list(size=3)))
 
@@ -143,7 +137,7 @@ p2 <- ggmap(bsmap) +
   scale_size('Temp (ave)', range = c(1, 10)) +
   scale_alpha('Temp (sd)') +
   coord_map() + 
-  facet_wrap(~mo) + 
+  facet_wrap(~yr) + 
   pbase +
   guides(alpha = guide_legend(override.aes = list(size=3)))
 
@@ -161,7 +155,7 @@ p3 <- ggmap(bsmap) +
   scale_size('Omega (ave)', range = c(1, 10)) +
   scale_alpha('Omega (sd)') +
   coord_map() + 
-  facet_wrap(~mo) + 
+  facet_wrap(~yr) + 
   pbase +
   guides(alpha = guide_legend(override.aes = list(size=3)))
 
@@ -170,21 +164,21 @@ p3
 
 ### Clustering {.tabset}
 
-Sites are clustered below based on water quality aggregations for the selected months.  
+Sites are clustered below based on water quality aggregations for the selected years.  
 
 ```{r}
-selectInput('clmo1', 'Select month for clustering:', choices = c('Jul', 'Sep', 'Apr'), selected = 'Sep')
+selectInput('clyr1', 'Select year for clustering:', choices = c(2014, 2015, 2016), selected = 2014)
 ```
 
 ```{r}
 toclst1 <- reactive({
   
   # input
-  clmo1 <- input$clmo1
+  clyr1 <- input$clyr1
 
   out <- toplo1b %>%
     ungroup %>% 
-    filter(mo %in% clmo1) %>% 
+    filter(yr %in% clyr1) %>% 
     select(station, var, valmn) %>% 
     spread(var, valmn) %>% 
     data.frame %>% 
@@ -356,9 +350,9 @@ renderPlot({
 
 ## Pteropod response
 
-The plots below show averages for dissolution across years for the same month.  Points are sized by magnitude of the average and colored with transparency for the standard deviation of the estimates. 
+The plots below show averages for dissolution across months for the same year.  Points are sized by magnitude of the average and colored with transparency for the standard deviation of the estimates. 
 
-### Monthly averages by response measures {.tabset}
+### Annual averages by response measures {.tabset}
 
 ```{r}
 toplo2a <- biodat %>%
@@ -373,15 +367,12 @@ toplo2a <- biodat %>%
 
 # average across years by month
 toplo2b <- toplo2a %>%
-  group_by(station, var, mo, lat, lon) %>%
+  group_by(station, var, yr, lat, lon) %>%
   summarise(
     valmn = mean(val, na.rm = T),
     valsd = sd(val, na.rm = T)
   ) %>%
-  ungroup %>%
-  mutate(
-    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'))
-  )
+  ungroup 
 
 pbase <- theme_bw(base_size = 14, base_family = 'serif') +
   theme(
@@ -401,7 +392,7 @@ pbase <- theme_bw(base_size = 14, base_family = 'serif') +
 <!--   scale_size('Type 1 dissolution (ave)', range = c(1, 10)) + -->
 <!--   scale_alpha('Type 1 dissolution (sd)') + -->
 <!--   coord_map() + -->
-<!--   facet_wrap(~mo) + -->
+<!--   facet_wrap(~yr) + -->
 <!--   pbase + -->
 <!--   guides(alpha = guide_legend(override.aes = list(size=3))) -->
 
@@ -419,7 +410,7 @@ pbase <- theme_bw(base_size = 14, base_family = 'serif') +
 <!--   scale_size('Type 2 dissolution (ave)', range = c(1, 10)) + -->
 <!--   scale_alpha('Type 2 dissolution (sd)') + -->
 <!--   coord_map() + -->
-<!--   facet_wrap(~mo) + -->
+<!--   facet_wrap(~yr) + -->
 <!--   pbase + -->
 <!--   guides(alpha = guide_legend(override.aes = list(size=3))) -->
 
@@ -437,7 +428,7 @@ p3 <- ggmap(bsmap) +
   scale_size('Type 3 dissolution (ave)', range = c(1, 10)) +
   scale_alpha('Type 3 dissolution (sd)') +
   coord_map() +
-  facet_wrap(~mo) +
+  facet_wrap(~yr) +
   pbase +
   guides(alpha = guide_legend(override.aes = list(size=3)))
 
@@ -446,21 +437,21 @@ p3
 
 ### Clustering {.tabset}
 
-Sites are clustered below based on dissolutuion aggregations for the selected months.  
+Sites are clustered below based on dissolutuion aggregations for the selected years.  
 
 ```{r}
-selectInput('clmo2', 'Select month for clustering:', choices = c('Jul', 'Sep', 'Apr'), selected = 'Sep')
+selectInput('clyr2', 'Select year for clustering:', choices = c(2014, 2015, 2016), selected = 2014)
 ```
 
 ```{r}
 toclst2 <- reactive({
 
   # input
-  clmo2 <- input$clmo2
+  clyr2 <- input$clyr2
 
   out <- toplo2b %>%
     ungroup %>%
-    filter(mo %in% clmo2) %>%
+    filter(mo %in% clyr2) %>%
     select(station, var, valmn) %>%
     spread(var, valmn) %>%
     data.frame %>%
