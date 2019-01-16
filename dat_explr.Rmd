@@ -2,8 +2,7 @@
 title: "Pteropod Puget Sound time series"
 author: ""
 output: 
-  html_document:
-    css: kable.css
+  html_document
 self_contained: yes
 runtime: shiny
 ---
@@ -443,7 +442,8 @@ renderPlot({
   
   p1 <- ggplot(toplo, aes(x = strsdis, y = rsp)) +
     geom_line(aes(group = costa)) +
-    geom_point(aes(fill = mo, group = costa), pch = 21, size = 4) +
+    # geom_point(aes(fill = mo, group = costa), pch = 21, size = 4) +
+    geom_label(aes(fill = mo, group = costa, label = station), size = 3, colour = 'grey') +
     geom_smooth(method = 'lm', colour = 'red') +
     xlab('Cumulative stress magnitude') +
     ylab(dis) +
@@ -456,7 +456,8 @@ renderPlot({
   
   p2 <- ggplot(toplo, aes(x = mo, y = strsdis, group = costa)) +
     geom_line() +
-    geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.1, height = 0.1) +
+    # geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.1, height = 0.1) +
+    geom_label(aes(fill = mo, group = costa, label = station, size = rsp), colour = 'grey', position = position_jitter(width = 0.1, height = 0.1)) +
     ylab('Cumulative stress magnitude') +
     facet_wrap(~cohortyr) +
     theme_bw(base_family = 'serif', base_size = 16) + 
@@ -492,7 +493,8 @@ renderPlot({
   
   p1 <- ggplot(toplo, aes(x = strscnt, y = rsp)) +
     geom_line(aes(group = costa)) +
-    geom_point(aes(fill = mo, gruop = costa), pch = 21, size = 4) +
+    # geom_point(aes(fill = mo, group = costa), pch = 21, size = 4) +
+    geom_label(aes(fill = mo, group = costa, label = station), size = 3, colour = 'grey') +
     geom_smooth(method = 'lm', colour = 'red') +
     xlab('Cumulative stress magnitude') +
     ylab(dis) +
@@ -505,7 +507,8 @@ renderPlot({
   
   p2 <- ggplot(toplo, aes(x = mo, y = strscnt, group = costa)) +
     geom_line() +
-    geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.1, height = 0.1) +
+    # geom_jitter(aes(fill = mo, size = rsp), pch = 21, width = 0.1, height = 0.1) +
+    geom_label(aes(fill = mo, group = costa, label = station, size = rsp), colour = 'grey', position = position_jitter(width = 0.1, height = 0.1)) +
     ylab('Cumulative stress magnitude') +
     facet_wrap(~cohortyr) +
     theme_bw(base_family = 'serif', base_size = 16) + 

@@ -319,7 +319,7 @@ library(sjPlot)
 library(multcompView)
 
 # import oyster data
-dat &lt;- read.csv('C:/Users/Marcus.SCCWRP2K/Desktop/AllData_collated.csv', stringsAsFactors = F) %&gt;% 
+dat &lt;- read.csv('raw/AllData_collated.csv', stringsAsFactors = F) %&gt;% 
   select(Exposure, Organism, Full_ID, Station, Group, Individual, Length_mm, Final_Weight) %&gt;% 
   mutate(
     Station = factor(Station, levels = c('OUT', 'EDG', 'MID')), 
@@ -357,6 +357,7 @@ datprc &lt;- dat %&gt;%
     })
   )</code></pre>
 <pre class="r"><code>plofun &lt;- function(x){
+  
   psig=as.numeric(apply(x$`Exposure:Station`[,2:3],1,prod)&gt;=0)+1
   op=par(mar=c(4.2,9,3.8,2))
   plot(x,col=psig,yaxt=&quot;n&quot;)
