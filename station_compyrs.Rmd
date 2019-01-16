@@ -92,7 +92,7 @@ toplo1a <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA'
     mo = month(mo, label = T)
   )
 
-# average across months by year
+# average across years by month
 toplo1b <- toplo1a %>% 
   group_by(station, var, yr, lat, lon) %>% 
   summarise(
@@ -365,7 +365,7 @@ toplo2a <- biodat %>%
 #   geom_boxplot(position = 'dodge') +
 #   facet_grid(var ~ mo, scales = 'free_y')
 
-# average across years by month
+# average across months by year
 toplo2b <- toplo2a %>%
   group_by(station, var, yr, lat, lon) %>%
   summarise(
@@ -451,7 +451,7 @@ toclst2 <- reactive({
 
   out <- toplo2b %>%
     ungroup %>%
-    filter(mo %in% clyr2) %>%
+    filter(yr %in% clyr2) %>%
     select(station, var, valmn) %>%
     spread(var, valmn) %>%
     data.frame %>%
