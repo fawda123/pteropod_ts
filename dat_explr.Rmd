@@ -52,7 +52,7 @@ strdat <- reactive({
     filter(station %in% sta) %>% 
     mutate(
       aracat = ifelse(chmval < thrsh, 1, 0),
-      aradff = pmax(0, thrsh - chmval)
+      aradff = thrsh - chmval
       ) %>% 
     unite('costa', cohortyr, station, remove = F) %>% 
     group_by(costa) %>% 
