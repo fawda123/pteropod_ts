@@ -61,7 +61,7 @@ The plots below show averages for salinity, temperature, and omega across months
 ```{r}
 toplo1a <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
-         CTDSAL_PSS78, `Omega Ar`) %>% 
+         CTDSAL_PSS78, CTDOXY_UMOL_KG_ADJ, `Omega Ar`) %>% 
   rename(
     date = Date_collected, 
     station = STATION_NO,
@@ -70,7 +70,8 @@ toplo1a <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA'
     niskin = NISKIN_NO,
     temp = CTDTMP_DEG_C_ITS90,
     sal = CTDSAL_PSS78,
-    ara = `Omega Ar`
+    ara = `Omega Ar`,
+    oxy = CTDOXY_UMOL_KG_ADJ
   ) %>% 
   mutate(
     date = as.Date(date)
@@ -162,6 +163,26 @@ p3 <- ggmap(bsmap) +
 p3
 ```
 
+#### Oxygen
+
+```{r, fig.height = 6, fig.width = 8}
+araplo <- toplo1b %>% 
+  filter(var %in% 'oxy')
+p3 <- ggmap(bsmap) +
+  geom_point(data = araplo, aes(x = lon, y = lat, size = valmn, alpha = valsd), colour = 'tomato1') + 
+  geom_point(data = araplo, aes(x = lon, y = lat, size = valmn), pch = 21) + 
+  scale_size('Oxygen (ave)', range = c(1, 10)) +
+  scale_alpha('Oxygen (sd)') +
+  coord_map() + 
+  facet_wrap(~yr) + 
+  pbase +
+  guides(alpha = guide_legend(override.aes = list(size=3)))
+
+p3
+```
+
+
+
 ### Clustering {.tabset}
 
 Sites are clustered below based on water quality aggregations for the selected years.  
@@ -182,7 +203,8 @@ toclst1 <- reactive({
     select(station, var, valmn) %>% 
     spread(var, valmn) %>% 
     data.frame %>% 
-    column_to_rownames('station')
+    column_to_rownames('station') %>% 
+    decostand(method = 'standardize')
   
   return(out)
   
