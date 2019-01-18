@@ -69,7 +69,7 @@ strdat <- reactive({
 ```{r}
 column(12, 
   column(4, 
-    selectInput('chm', 'Select chemistry:', choices = c('ara', 'co3', 'ph', 'pco2', 'temp', 'oxy'))
+    selectInput('chm', 'Select chemistry:', choices = c('ara', 'araund', 'co3', 'ph', 'pco2', 'temp', 'oxy'))
   ),
   
   column(4, 

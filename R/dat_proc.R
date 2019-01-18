@@ -116,6 +116,32 @@ chmdatsum <- chmdatall %>%
   select(-dy) %>% 
   select(date, yr, cohortyr, mo, station, lon, lat, everything())
 
+# percent depths undersaturated for aragonite, this is diff from ave, min, max so must do separately
+# its gotta look the same as chemdatsum to join
+perund <- chmdatall %>% 
+  filter(var %in% 'ara') %>% 
+  group_by(yr, mo, station, lon, lat, var) %>% 
+  summarise(
+    ave = sum(val < 1, na.rm = T) / length(val),
+    min = ave,
+    max = ave,
+    std = ave
+  ) %>% 
+  ungroup %>% 
+  mutate(dy = 15) %>% 
+  unite('date', yr, mo, dy, sep = '-', remove = F) %>% 
+  mutate(
+    date = ymd(date),
+    cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr),
+    var = 'araund'
+  ) %>% 
+  select(-dy) %>% 
+  select(date, yr, cohortyr, mo, station, lon, lat, everything())
+
+chmdatsum <- chmdatsum %>% 
+  bind_rows(perund) %>% 
+  arrange(date, -station, var)
+
 save(chmdatsum, file = 'data/chmdatsum.RData', compress = 'xz')
 
 ##
