@@ -211,6 +211,107 @@ renderPlot({
 
 ```
 
+The third set of plots show the selected environmental measure against oxygen with points sized by the pteropod response measure. The x-axis is alway oxygen and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by month. 
+```{r}
+column(12, 
+  column(4, 
+    selectInput('oxy', 'Select x-axis oxygen value:', choices = c('min', 'ave', 'max', 'std'))
+  )
+)
+
+oxydat <- reactive({
+  
+  # input
+  chm <- input$chm
+  dis <- input$dis
+  val <- input$val
+  sta <- input$sta
+  oxy <- input$oxy
+  chmlab <- chmlab()
+  
+  dat <- chmdatsum %>% 
+    filter(var %in% c(chm, 'oxy')) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    gather('dissvar', 'dissval', typ1:typ3) %>% 
+    gather('chemvar', 'chemval', ave:std) %>% 
+    filter(dissvar %in% dis) %>% 
+    filter(station %in% sta) %>% 
+    filter(var %in% chm & chemvar %in% val | var %in% 'oxy' & chemvar %in% oxy) %>% 
+    select(-chemvar) %>% 
+    spread(var, chemval)
+  
+  return(dat)
+  
+})
+
+lmmod <- reactive({
+  
+  # input
+  oxydat <- oxydat()
+  datapr <- oxydat %>% 
+    filter(mo %in% c('Apr'))
+  datsep <- oxydat %>% 
+    filter(mo %in% c('Sep'))
+  
+  modapr <- lm(dissval ~ ara*oxy, data = datapr) %>% 
+    step(trace = 0) %>% 
+    summary()
+  
+  modsep <- lm(dissval ~ ara*oxy, data = datsep) %>% 
+    step(trace = 0) %>% 
+    summary()
+  return(list(September = modsep, April = modapr))
+
+})
+
+renderPlot({
+  
+  validate(
+    need(input$chm != 'oxy', 'oxygen on both plot axes not possible')
+  )
+  
+  # inputs
+  oxydat <- oxydat()
+  chm <- input$chm
+  dis <- input$dis
+  oxy <- input$oxy
+  chmlab <- chmlab()
+
+  p <- ggplot(oxydat, aes_string(x = 'oxy', y = chm, size = 'dissval')) +
+    geom_point(aes(fill = mo, group = station), pch = 21) +
+    stat_smooth(aes(colour = mo), method = 'lm', se = F, size = 0.7) +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    facet_grid(~ cohortyr) +
+    ylab(chmlab) +
+    xlab(paste(oxy, 'oxy')) +
+    scale_size(dis, range = c(2, 10)) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      # legend.title = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    guides(
+      fill = guide_legend('', override.aes = list(size = 4)),
+      size = guide_legend(override.aes = list(linetype = 0))
+      )
+
+  return(p)
+  
+}, height = 315, width = 850)
+
+renderPrint({
+  
+  validate(
+    need(input$chm != 'oxy', 'model not possible with selection')
+  )
+  
+  lmmod()
+  
+})
+```
+
 ### Grouped by season
 
 The first set of plots show the selected pteropod response measure against the selected environmental measure observed at the time of sampling.  Plots are facetted by cohort-year with points in each facet colored by cohort year. 
@@ -311,6 +412,100 @@ renderPlot({
 }, height = 315, width = 850)
 
 ```
+
+The third set of plots show the selected environmental measure against oxygen with points sized by the pteropod response measure. The x-axis is alway oxygen and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by cohort year. 
+```{r}
+column(12, 
+  column(4, 
+    selectInput('oxy2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std'))
+  )
+)
+
+oxydat2 <- reactive({
+  
+  # input
+  chm <- input$chm
+  dis <- input$dis
+  val <- input$val
+  sta <- input$sta
+  oxy2 <- input$oxy2
+  chmlab <- chmlab()
+  
+  dat <- chmdatsum %>% 
+    filter(var %in% c(chm, 'oxy')) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    gather('dissvar', 'dissval', typ1:typ3) %>% 
+    gather('chemvar', 'chemval', ave:std) %>% 
+    filter(dissvar %in% dis) %>% 
+    filter(station %in% sta) %>% 
+    filter(var %in% chm & chemvar %in% val | var %in% 'oxy' & chemvar %in% oxy2) %>% 
+    select(-chemvar) %>% 
+    spread(var, chemval)
+  
+  return(dat)
+  
+})
+
+lmmod2 <- reactive({
+  
+  # input
+  oxydat2 <- oxydat2()
+  
+  mod <- lm(dissval ~ ara * oxy, data = oxydat2) %>% 
+    summary
+  
+  return(mod)
+
+})
+
+renderPlot({
+  
+  validate(
+    need(input$chm != 'oxy', 'oxygen on both plot axes not possible')
+  )
+  
+  # inputs
+  oxydat2 <- oxydat2()
+  chm <- input$chm
+  dis <- input$dis
+  oxy2 <- input$oxy2
+  chmlab <- chmlab()
+  
+  p <- ggplot(oxydat2, aes_string(x = 'oxy', y = chm, size = 'dissval')) +
+    geom_point(aes(fill = factor(cohortyr), group = station), pch = 21) +
+    stat_smooth(aes(colour = cohortyr), method = 'lm', se = F, size = 0.7) +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    facet_grid(~ mo) +
+    ylab(chmlab) +
+    xlab(paste(oxy2, 'oxy')) +
+    scale_size(dis, range = c(2, 10)) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      # legend.title = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    guides(
+      fill = guide_legend('', override.aes = list(size = 4)),
+      size = guide_legend(override.aes = list(linetype = 0))
+      )
+
+  return(p)
+  
+}, height = 315, width = 850)
+
+renderPrint({
+  
+  validate(
+    need(input$chm != 'oxy', 'model not possible with selection')
+  )
+  
+  lmmod2()
+  
+})
+```
+
 
 ### By station and cumulative stress {.tabset .tabset-pills}
 
