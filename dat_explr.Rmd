@@ -19,6 +19,8 @@ library(lubridate)
 library(patchwork)
 library(shinyWidgets)
 
+source('R/funcs.R')
+
 data(chmdatsum)
 data(chmdatraw)
 data(biodat)
@@ -258,12 +260,10 @@ lmmod <- reactive({
     formula
   
   modapr <- lm(frm, data = datapr) %>% 
-    step(trace = 0) %>% 
-    summary()
+    step(trace = 0) 
   
   modsep <- lm(frm, data = datsep) %>% 
-    step(trace = 0) %>% 
-    summary()
+    step(trace = 0) 
   
   return(list(September = modsep, April = modapr))
 
@@ -311,9 +311,94 @@ renderPrint({
     need(input$chm != 'oxy', 'model not possible with selection')
   )
   
-  lmmod()
+  # input
+  lmmod <- lmmod()
+  
+  lapply(lmmod, summary)
   
 })
+
+# sept mod
+renderPlot({
+  
+  req(input$chm != 'oxy')
+  
+  # input
+  lmmod <- lmmod()
+  
+  lmmodplo <- lmmod$September
+  chkfrm <- lmmodplo$call$formula %>% 
+    as.character %>% 
+    paste(collapse = ' ')
+  validate(
+    need(grepl('\\:|\\*', chkfrm), 'No interaction in September model')
+  )
+  
+  # colors
+  cols <- RColorBrewer::brewer.pal(9, 'RdBu')
+  
+  # get data to plot
+  pldat <- get_pldat(lmmodplo, 'oxy')
+  pl1 <- pldat[[1]]
+  pl2 <- pldat[[2]]
+  
+  # names for aes_string
+  nms <- names(pl1)
+  p1 <- ggplot() +
+    geom_ribbon(data = pl1, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+    geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+    geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
+    theme_bw() +
+    scale_x_continuous(nms[3]) +
+    scale_colour_gradientn(colours = cols) + 
+    scale_y_continuous(nms[1]) +
+    ggtitle('September model')
+  
+  return(p1)
+  
+}, height = 300, width = 600)
+
+# april mod
+renderPlot({
+  
+  req(input$chm != 'oxy')
+  
+  # input
+  lmmod <- lmmod()
+  
+  lmmodplo <- lmmod$April
+  chkfrm <- lmmodplo$call$formula %>% 
+    as.character %>% 
+    paste(collapse = ' ')
+
+  validate(
+    need(grepl('\\:|\\*', chkfrm), 'No interaction in April model')
+  )
+
+  # colors
+  cols <- RColorBrewer::brewer.pal(9, 'RdBu')
+  
+  # get data to plot
+  pldat <- get_pldat(lmmodplo, 'oxy')
+  pl1 <- pldat[[1]]
+  pl2 <- pldat[[2]]
+  
+  # names for aes_string
+  nms <- names(pl1)
+  p1 <- ggplot() +
+    geom_ribbon(data = pl1, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+    geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+    geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
+    theme_bw() +
+    scale_x_continuous(nms[3]) +
+    scale_colour_gradientn(colours = cols) + 
+    scale_y_continuous(nms[1]) +
+    ggtitle('April model')
+  
+  return(p1)
+  
+}, height = 300, width = 600)
+
 ```
 
 ### Grouped by season
