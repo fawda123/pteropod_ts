@@ -163,6 +163,10 @@ column(12,
 
 renderPlot({
   
+  validate(
+    need(input$chm != 'temp', 'temperature on both plot axes not possible')
+  )
+  
   # inputs
   chm <- input$chm
   dis <- input$dis
@@ -259,6 +263,10 @@ column(12,
 )
 
 renderPlot({
+  
+  validate(
+    need(input$chm != 'temp', 'temperature on both plot axes not possible')
+  )
   
   # inputs
   chm <- input$chm
