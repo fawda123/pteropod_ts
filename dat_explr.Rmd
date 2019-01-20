@@ -253,14 +253,18 @@ lmmod <- reactive({
     filter(mo %in% c('Apr'))
   datsep <- oxydat %>% 
     filter(mo %in% c('Sep'))
+
+  frm <- paste('dissval ~', input$chm, '*oxy') %>% 
+    formula
   
-  modapr <- lm(dissval ~ ara*oxy, data = datapr) %>% 
+  modapr <- lm(frm, data = datapr) %>% 
     step(trace = 0) %>% 
     summary()
   
-  modsep <- lm(dissval ~ ara*oxy, data = datsep) %>% 
+  modsep <- lm(frm, data = datsep) %>% 
     step(trace = 0) %>% 
     summary()
+  
   return(list(September = modsep, April = modapr))
 
 })
@@ -447,18 +451,6 @@ oxydat2 <- reactive({
   
 })
 
-lmmod2 <- reactive({
-  
-  # input
-  oxydat2 <- oxydat2()
-  
-  mod <- lm(dissval ~ ara * oxy, data = oxydat2) %>% 
-    summary
-  
-  return(mod)
-
-})
-
 renderPlot({
   
   validate(
@@ -495,15 +487,6 @@ renderPlot({
   
 }, height = 315, width = 850)
 
-renderPrint({
-  
-  validate(
-    need(input$chm != 'oxy', 'model not possible with selection')
-  )
-  
-  lmmod2()
-  
-})
 ```
 
 
