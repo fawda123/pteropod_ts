@@ -64,6 +64,22 @@ strdat <- reactive({
   return(out)
   
 })
+
+# wq chem labels
+chmlab <- reactive({
+  
+  # input
+  chm <- input$chm
+  val <- input$val
+  
+  if(chm == 'araund')
+    return(chm)
+  
+  out <- paste(val, chm)
+  
+  return(out)
+  
+})
 ```
 
 ```{r}
@@ -105,7 +121,7 @@ renderPlot({
   dis <- input$dis
   val <- input$val
   sta <- input$sta
-  
+  chmlab <- chmlab()
   
   dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
@@ -123,7 +139,7 @@ renderPlot({
     geom_point(aes(fill = mo, group = station), pch = 21, size = 4) +
     facet_grid(~ cohortyr) + #, scales = 'free') +
     ylab(dis) +
-    xlab(paste(val, chm)) +
+    xlab(chmlab) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(), 
@@ -153,6 +169,7 @@ renderPlot({
   val <- input$val
   tmp <- input$tmp
   sta <- input$sta
+  chmlab <- chmlab()
 
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'temp')) %>% 
@@ -170,7 +187,7 @@ renderPlot({
     geom_point(aes(fill = mo, group = station), pch = 21) +
     stat_smooth(method = 'lm', se = F, colour = 'red') +
     facet_grid(~ cohortyr) +
-    ylab(paste(val, chm)) +
+    ylab(chmlab) +
     xlab(paste(tmp, 'temp')) +
     scale_size(dis, range = c(2, 10)) +
     theme_bw(base_family = 'serif', base_size = 16) +
@@ -201,6 +218,7 @@ renderPlot({
   dis <- input$dis
   val <- input$val
   sta <- input$sta
+  chmlab <- chmlab()
   
   dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
@@ -218,7 +236,7 @@ renderPlot({
     geom_point(aes(fill = factor(cohortyr), group = station), pch = 21, size = 4) +
     facet_grid(~ mo) + #, scales = 'free') +
     ylab(dis) +
-    xlab(paste(val, chm)) +
+    xlab(chmlab) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
       strip.background = element_blank(), 
@@ -248,6 +266,7 @@ renderPlot({
   val <- input$val
   sta <- input$sta
   tmp2 <- input$tmp2
+  chmlab <- chmlab()
   
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'temp')) %>% 
@@ -265,7 +284,7 @@ renderPlot({
     geom_point(aes(fill = factor(cohortyr), group = station), pch = 21) +
     stat_smooth(method = 'lm', se = F, colour = 'red') +
     facet_grid(~ mo) +
-    ylab(paste(val, chm)) +
+    ylab(chmlab) +
     xlab(paste(tmp2, 'temp')) +
     scale_size(dis, range = c(2, 10)) +
     theme_bw(base_family = 'serif', base_size = 16) +
@@ -304,6 +323,10 @@ column(12,
        
        )
 renderPlot({
+  
+  validate(
+    need(input$chm != 'araund', 'profile plots not appropriate for araund')
+  )
   
   # input 
   chm <- input$chm
@@ -364,6 +387,7 @@ renderPlot({
   sta <- input$sta
   thrsh <- input$thrsh
   strdat <- strdat()
+  chmlab <- chmlab()
   
   # bio
   toplo1 <- biodat %>% 
@@ -408,7 +432,7 @@ renderPlot({
       # panel.grid = element_blank(), 
       legend.position = 'top'
       ) +
-    ylab(chm) + 
+    ylab(chmlab) + 
     scale_x_discrete(labels = format(sort(unique(toplo2$date)), '%Y-%m'))
 
   # add 1 horizontal or aragonite
@@ -429,6 +453,10 @@ Within each cohort year, the "cumulative stress" was estimated as the duration o
 ```{r}
 
 renderPlot({
+  
+  validate(
+    need(input$chm == 'ara', 'plots only valid for aragonite')
+  )
   
   # input
   strdat <- strdat()
@@ -480,6 +508,10 @@ Within each cohort year, the "cumulative stress" was estimated as the duration o
 
 ```{r}
 renderPlot({
+  
+  validate(
+    need(input$chm == 'ara', 'plots only valid for aragonite')
+  )
   
   # input
   strdat <- strdat()
