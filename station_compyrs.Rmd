@@ -354,7 +354,7 @@ renderPlot({
   clstgrps1 <- clstgrps1()
 
   mapplo <- locs %>%
-    mutate(clstgrps1 = clstgrps1)
+    mutate(clstgrps1 = rev(clstgrps1))
 
   # plot the basemap
   ggmap(bsmap) +
@@ -627,7 +627,7 @@ renderPlot({
   clstgrps2 <- clstgrps2()
 
   mapplo <- locs %>%
-    mutate(clstgrps2 = clstgrps2)
+    mutate(clstgrps2 = rev(clstgrps2))
 
   # plot the basemap
   ggmap(bsmap) +
