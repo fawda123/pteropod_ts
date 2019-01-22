@@ -24,6 +24,7 @@ library(ggdendro)
 library(dendextend)
 library(mapview)
 library(shiny)
+library(mapproj)
 
 load(file = 'data/biodat.RData')
 load(file = 'data/chmdatsum.RData')
