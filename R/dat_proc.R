@@ -1,6 +1,7 @@
 library(tidyverse)
 library(lubridate)
 library(readxl)
+library(mgcv)
 
 ##
 # bio data
@@ -104,7 +105,8 @@ chmdatsum <- chmdatall %>%
     ave = mean(val, na.rm = T),
     min = min(val, na.rm = T),
     max = max(val, na.rm = T),
-    std = sd(val, na.rm = T)
+    std = sd(val, na.rm = T), 
+    rng = diff(range(val, na.rm = T))
   ) %>% 
   ungroup %>% 
   mutate(dy = 15) %>% 
@@ -125,7 +127,9 @@ perund <- chmdatall %>%
     ave = sum(val < 1, na.rm = T) / length(val),
     min = ave,
     max = ave,
-    std = ave
+    std = ave,
+    rng = ave,
+    dlt = ave
   ) %>% 
   ungroup %>% 
   mutate(dy = 15) %>% 
@@ -138,7 +142,32 @@ perund <- chmdatall %>%
   select(-dy) %>% 
   select(date, yr, cohortyr, mo, station, lon, lat, everything())
 
+# get delta values from surface to 40m
+delt40 <- chmdatall %>% 
+  group_by(yr, mo, station, var) %>% 
+  nest %>% 
+  mutate(
+    dlt = purrr::map(data, function(x){
+      
+      # extrapolate env variable at zero depth
+      mod <- loess(val ~ depth, x)
+      rng <- range(x$depth, na.rm = T)
+      est <- predict(mod, newdata = data.frame(depth = c(40, rng[1])))
+      return(diff(est))
+      
+      # depdat <- seq(min(x$depth, na.rm = T), max(x$depth, na.rm = T), length = 100)
+      # prddat <- predict(mod, newdata = data.frame(depth = depdat))
+      # prddat <- data.frame(val = prddat, depth = depdat)
+      # plot(-depth ~ val, x)
+      # lines(prddat$val, -prddat$depth)
+      
+    })
+  ) %>% 
+  select(-data) %>% 
+  unnest
+
 chmdatsum <- chmdatsum %>% 
+  full_join(delt40, by = c('yr' , 'mo', 'station', 'var')) %>% 
   bind_rows(perund) %>% 
   arrange(date, -station, var)
 

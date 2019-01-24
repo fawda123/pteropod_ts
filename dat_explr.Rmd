@@ -49,7 +49,7 @@ strdat <- reactive({
     filter(var %in% 'ara') %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
-    gather('ara', 'chmval', ave:std) %>% 
+    gather('ara', 'chmval', ave:dlt) %>% 
     filter(ara %in% val) %>% 
     filter(station %in% sta) %>% 
     mutate(
@@ -91,7 +91,7 @@ column(12,
   ),
   
   column(4, 
-    selectInput('val', 'Select chemistry value:', choices = c('min', 'ave', 'max', 'std'))
+    selectInput('val', 'Select chemistry value:', choices = c('min', 'ave', 'max', 'std', 'rng', 'dlt'))
   ),
   
   column(4, 
@@ -130,7 +130,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:std) %>% 
+    gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
     filter(chemvar %in% val) %>% 
     filter(station %in% sta)
@@ -159,7 +159,7 @@ The second set of plots show the selected environmental measure against temperat
 ```{r}
 column(12, 
   column(4, 
-    selectInput('tmp', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std'))
+    selectInput('tmp', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std', 'rng', 'dlt'))
   )
 )
 
@@ -182,7 +182,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:std) %>% 
+    gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
     filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp) %>%
     filter(station %in% sta) %>% 
@@ -217,7 +217,7 @@ The third set of plots show the selected environmental measure against oxygen wi
 ```{r}
 column(12, 
   column(4, 
-    selectInput('oxy', 'Select x-axis oxygen value:', choices = c('min', 'ave', 'max', 'std'))
+    selectInput('oxy', 'Select x-axis oxygen value:', choices = c('min', 'ave', 'max', 'std', 'rng', 'dlt'))
   )
 )
 
@@ -236,7 +236,7 @@ oxydat <- reactive({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:std) %>% 
+    gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
     filter(station %in% sta) %>% 
     filter(var %in% chm & chemvar %in% val | var %in% 'oxy' & chemvar %in% oxy) %>% 
@@ -251,21 +251,29 @@ lmmod <- reactive({
   
   # input
   oxydat <- oxydat()
+  modtyp <- input$modtyp
+  
+  datjul <- oxydat %>% 
+    filter(mo %in% c('Jul'))
   datapr <- oxydat %>% 
     filter(mo %in% c('Apr'))
   datsep <- oxydat %>% 
     filter(mo %in% c('Sep'))
 
-  frm <- paste('dissval ~', input$chm, '*oxy') %>% 
-    formula
+  frm <- paste('dissval ~', input$chm, '+oxy')
+  if(modtyp)
+    frm <- gsub('\\+', '*', frm)
+
+  modjul <- paste('lm(', frm, ', data = datjul)')
+  modjul <- eval(parse(text = modjul))
   
-  modapr <- lm(frm, data = datapr) %>% 
-    step(trace = 0) 
+  modsep <- paste('lm(', frm, ', data = datsep)')
+  modsep <- eval(parse(text = modsep))
   
-  modsep <- lm(frm, data = datsep) %>% 
-    step(trace = 0) 
+  modapr <- paste('lm(', frm, ', data = datapr)')
+  modapr <- eval(parse(text = modapr))
   
-  return(list(September = modsep, April = modapr))
+  return(list(July = modjul, September = modsep, April = modapr))
 
 })
 
@@ -304,7 +312,22 @@ renderPlot({
   return(p)
   
 }, height = 315, width = 850)
+```
 
+#### {.tabset .tabset-pills}
+
+```{r}
+column(12, 
+column(width = 4, 
+       selectInput('modtyp', "Include interaction:", choices = c(T, F))
+       )
+)
+```
+
+
+##### July model
+
+```{r}
 renderPrint({
   
   validate(
@@ -314,7 +337,60 @@ renderPrint({
   # input
   lmmod <- lmmod()
   
-  lapply(lmmod, summary)
+  summary(lmmod$July)
+  
+})
+
+# july mod
+renderPlot({
+  
+  req(input$chm != 'oxy')
+  
+  # input
+  lmmod <- lmmod()
+  chmlab <- chmlab()
+  oxy <- input$oxy
+  
+  lmmodplo <- lmmod$July
+  
+  # colors
+  cols <- RColorBrewer::brewer.pal(9, 'RdBu')
+  
+  # get data to plot
+  pldat <- get_pldat(lmmodplo, 'oxy')
+  pl1 <- pldat[[1]]
+  pl2 <- pldat[[2]]
+  
+  # names for aes_string
+  nms <- names(pl1)
+  p1 <- ggplot() +
+    geom_ribbon(data = pl1, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+    geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+    geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
+    theme_bw() +
+    scale_x_continuous(chmlab) +
+    scale_colour_gradientn(paste(oxy, 'oxy'), colours = cols) + 
+    scale_y_continuous(nms[1]) +
+    ggtitle('July model')
+  
+  return(p1)
+  
+}, height = 300, width = 600)
+```
+
+##### September model
+
+```{r}
+renderPrint({
+  
+  validate(
+    need(input$chm != 'oxy', 'model not possible with selection')
+  )
+  
+  # input
+  lmmod <- lmmod()
+  
+  summary(lmmod$September)
   
 })
 
@@ -325,14 +401,10 @@ renderPlot({
   
   # input
   lmmod <- lmmod()
+  chmlab <- chmlab()
+  oxy <- input$oxy
   
   lmmodplo <- lmmod$September
-  chkfrm <- lmmodplo$call$formula %>% 
-    as.character %>% 
-    paste(collapse = ' ')
-  validate(
-    need(grepl('\\:|\\*', chkfrm), 'No interaction in September model')
-  )
   
   # colors
   cols <- RColorBrewer::brewer.pal(9, 'RdBu')
@@ -349,14 +421,31 @@ renderPlot({
     geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
     geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
     theme_bw() +
-    scale_x_continuous(nms[3]) +
-    scale_colour_gradientn(colours = cols) + 
+    scale_x_continuous(chmlab) +
+    scale_colour_gradientn(paste(oxy, 'oxy'), colours = cols) + 
     scale_y_continuous(nms[1]) +
     ggtitle('September model')
   
   return(p1)
   
 }, height = 300, width = 600)
+```
+
+##### April model
+
+```{r}
+renderPrint({
+  
+  validate(
+    need(input$chm != 'oxy', 'model not possible with selection')
+  )
+  
+  # input
+  lmmod <- lmmod()
+  
+  summary(lmmod$April)
+  
+})
 
 # april mod
 renderPlot({
@@ -365,15 +454,10 @@ renderPlot({
   
   # input
   lmmod <- lmmod()
-  
-  lmmodplo <- lmmod$April
-  chkfrm <- lmmodplo$call$formula %>% 
-    as.character %>% 
-    paste(collapse = ' ')
+  chmlab <- chmlab()
+  oxy <- input$oxy
 
-  validate(
-    need(grepl('\\:|\\*', chkfrm), 'No interaction in April model')
-  )
+  lmmodplo <- lmmod$April
 
   # colors
   cols <- RColorBrewer::brewer.pal(9, 'RdBu')
@@ -390,8 +474,8 @@ renderPlot({
     geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
     geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
     theme_bw() +
-    scale_x_continuous(nms[3]) +
-    scale_colour_gradientn(colours = cols) + 
+    scale_x_continuous(chmlab) +
+    scale_colour_gradientn(paste(oxy, 'oxy'), colours = cols) + 
     scale_y_continuous(nms[1]) +
     ggtitle('April model')
   
@@ -419,7 +503,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:std) %>% 
+    gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
     filter(chemvar %in% val) %>%
     filter(station %in% sta) 
@@ -448,7 +532,7 @@ The second set of plots show the selected environmental measure against temperat
 ```{r}
 column(12, 
   column(4, 
-    selectInput('tmp2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std'))
+    selectInput('tmp2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std', 'rng', 'dlt'))
   )
 )
 
@@ -471,7 +555,7 @@ renderPlot({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:std) %>% 
+    gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
     filter(station %in% sta) %>% 
     filter(var %in% chm & chemvar %in% val | var %in% 'temp' & chemvar %in% tmp2) %>% 
@@ -506,7 +590,7 @@ The third set of plots show the selected environmental measure against oxygen wi
 ```{r}
 column(12, 
   column(4, 
-    selectInput('oxy2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std'))
+    selectInput('oxy2', 'Select x-axis temperature value:', choices = c('min', 'ave', 'max', 'std', 'rng', 'dlt'))
   )
 )
 
@@ -525,7 +609,7 @@ oxydat2 <- reactive({
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:std) %>% 
+    gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
     filter(station %in% sta) %>% 
     filter(var %in% chm & chemvar %in% val | var %in% 'oxy' & chemvar %in% oxy2) %>% 
@@ -686,7 +770,7 @@ renderPlot({
   # chem
   toplo2 <- chmdatsum %>% 
     filter(var %in% chm) %>% 
-    gather('estv', 'valv', ave:std) %>% 
+    gather('estv', 'valv', ave:dlt) %>% 
     filter(estv %in% val) %>% 
     filter(station %in% sta)
   
