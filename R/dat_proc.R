@@ -31,6 +31,46 @@ biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodDa
   select(-dy) %>%
   select(date, yr, cohortyr, everything())
 
+# additional abundance data (inds/m3, same as above)
+abuadd <- read_excel('raw/pteropod abundances 2014.xlsx') %>% 
+  rename(
+    date = Season, 
+    station = Station,
+    abu = `Pteropods/m^3`
+  ) %>% 
+  mutate(
+    station = gsub('^P', '', station), 
+    station = as.numeric(station),
+    date = as.Date(date), 
+    yr = year(date), 
+    mo = month(date),
+    mo = case_when(
+      yr == 2014 & mo == 10 ~ 9,
+      TRUE ~ mo
+    ),
+    dy = 15,
+    mo = month(mo, label = T),
+    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'), ordered = T),
+    cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr)
+  ) %>% 
+  unite('date', yr, mo, dy, sep = '-', remove = F) %>% 
+  mutate(date = ymd(date)) %>% 
+  select(-dy) %>%
+  select(date, yr, cohortyr, mo, station, abu) %>% 
+  na.omit
+
+# join with old abudat
+abuadd <- biodat %>% 
+  select(date, yr, cohortyr, mo, station, abu) %>% 
+  na.omit %>% 
+  bind_rows(abuadd, .)
+
+# join with complete biodat
+biodat <- biodat %>% 
+  select(-abu) %>% 
+  left_join(abuadd, by = c('date', 'yr', 'cohortyr', 'mo', 'station'))
+
+# join addl abundance data wiht new biodat
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
 ##
