@@ -191,7 +191,7 @@ renderPlot({
 
   p <- ggplot(disdat, aes(x = chemval, y = dissval)) +
     # geom_line(aes(group = station), colour = 'grey') +
-    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    stat_smooth(method = 'lm', se = T, colour = 'red') +
     geom_label(aes(fill = mo, group = station, label = station), colour = 'grey', size = 3) +
     ylab(dis) +
     xlab(chmlab) +
