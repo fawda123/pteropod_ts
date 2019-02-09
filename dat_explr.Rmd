@@ -110,20 +110,15 @@ column(12,
 
 Year values shown correspond to "cohort-years" that begin in June with spring spawning, i.e., the April "cohort-year" is one year prior to the calendar year.  
 
-## {.tabset}
-
-### Grouped by year
-
-The first set of plots show the selected pteropod response measure against the selected environmental measure observed at the time of sampling.  Plots are facetted by cohort-year with points in each facet colored by month. 
 ```{r}
-renderPlot({
+# data for first set of plots in first three tabs
+disdat <- reactive({
   
   # inputs
   chm <- input$chm
   dis <- input$dis
   val <- input$val
   sta <- input$sta
-  chmlab <- chmlab()
   
   dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
@@ -133,12 +128,103 @@ renderPlot({
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
     filter(chemvar %in% val) %>% 
-    filter(station %in% sta)
+    filter(station %in% sta)  
+  
+  return(dat)
+  
+})
 
-  p <- ggplot(dat, aes(x = chemval, y = dissval)) +
+# regression mods for first set of plots in first three tabs
+dismod <- reactive({
+  
+  # input
+  disdat <- disdat()
+  
+  # complete model
+  all <- lm(dissval ~ chemval, data = disdat)
+  
+  # by cohort years
+  bycohortyr <- disdat %>% 
+    group_by(cohortyr) %>% 
+    nest %>% 
+    mutate(
+      mod = purrr::map(data, function(x){ try({lm(dissval ~ chemval, data = x)})})
+    )
+  bycohortyrout <- pull(bycohortyr, mod)
+  names(bycohortyrout) <- pull(bycohortyr, cohortyr)
+
+  # by seasons
+  byseas <- disdat %>% 
+    group_by(mo) %>% 
+    nest %>% 
+    mutate(
+      mod = purrr::map(data, function(x){ try({lm(dissval ~ chemval, data = x)})})
+    )
+  byseasout <- pull(byseas, mod)
+  names(byseasout) <- pull(byseas, mo)
+
+  # combine all    
+  out <- c(
+    all = list(all), 
+    bycohortyrout,
+    byseasout
+    )
+  
+  return(out)
+  
+})
+```
+
+## {.tabset}
+
+### All data
+
+This plot shows the selected pteropod response measure against the selected environmental measure observed at the time of sampling.
+
+```{r}
+renderPlot({
+  
+  # inputs
+  disdat <- disdat()
+  dis <- input$dis
+  chmlab <- chmlab()
+
+  p <- ggplot(disdat, aes(x = chemval, y = dissval)) +
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se = F, colour = 'red') +
-    geom_point(aes(fill = mo, group = station), pch = 21, size = 4) +
+    geom_label(aes(fill = mo, group = station, label = station), colour = 'grey', size = 3) +
+    ylab(dis) +
+    xlab(chmlab) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 400, width = 400)
+
+renderPrint({lapply(dismod()['all'], summary)})
+```
+
+### Grouped by year
+
+The first set of plots show the selected pteropod response measure against the selected environmental measure observed at the time of sampling.  Plots are facetted by cohort-year with points in each facet colored by month. 
+
+```{r}
+renderPlot({
+  
+  # inputs
+  disdat <- disdat()
+  dis <- input$dis
+  chmlab <- chmlab()
+
+  p <- ggplot(disdat, aes(x = chemval, y = dissval)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    geom_label(aes(fill = mo, group = station, label = station), colour = 'grey', size = 3) +
     facet_grid(~ cohortyr) + #, scales = 'free') +
     ylab(dis) +
     xlab(chmlab) +
@@ -153,6 +239,7 @@ renderPlot({
   
 }, height = 300, width = 850)
 
+renderPrint({lapply(dismod()[c('2014', '2015', '2016')], summary)})
 ```
 
 The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. The x-axis is alway temperature and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by month. 
@@ -492,26 +579,14 @@ The first set of plots show the selected pteropod response measure against the s
 renderPlot({
   
   # inputs
-  chm <- input$chm
+  disdat <- disdat()
   dis <- input$dis
-  val <- input$val
-  sta <- input$sta
   chmlab <- chmlab()
-  
-  dat <- chmdatsum %>% 
-    filter(var %in% chm) %>% 
-    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
-    gather('dissvar', 'dissval', typ1:typ3) %>% 
-    gather('chemvar', 'chemval', ave:dlt) %>% 
-    filter(dissvar %in% dis) %>% 
-    filter(chemvar %in% val) %>%
-    filter(station %in% sta) 
 
-  p <- ggplot(dat, aes(x = chemval, y = dissval)) +
+  p <- ggplot(disdat, aes(x = chemval, y = dissval)) +
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se = F, colour = 'red') +
-    geom_point(aes(fill = factor(cohortyr), group = station), pch = 21, size = 4) +
+    geom_label(aes(fill = factor(cohortyr), group = station, label = station), colour = 'grey', size = 3) +
     facet_grid(~ mo) + #, scales = 'free') +
     ylab(dis) +
     xlab(chmlab) +
@@ -526,6 +601,7 @@ renderPlot({
   
 }, height = 300, width = 850)
 
+renderPrint({lapply(dismod()[c('Jul', 'Sep', 'Apr')], summary)})
 ```
 
 The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. The x-axis is alway temperature and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by cohort year. 
@@ -834,7 +910,8 @@ renderPlot({
     theme_bw(base_family = 'serif', base_size = 16) + 
     theme(
       legend.position = 'top', 
-      legend.title = element_blank()
+      legend.title = element_blank(), 
+      strip.background = element_blank()
     )
   
   p2 <- ggplot(toplo, aes(x = mo, y = strsdis, group = costa)) +
@@ -846,7 +923,8 @@ renderPlot({
     theme_bw(base_family = 'serif', base_size = 16) + 
     theme(
       axis.title.x = element_blank(), 
-      legend.position = 'top'
+      legend.position = 'top', 
+      strip.background = element_blank()
     ) + 
     scale_size(dis) +
     guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4)))
@@ -889,7 +967,8 @@ renderPlot({
     theme_bw(base_family = 'serif', base_size = 16) + 
     theme(
       legend.position = 'top', 
-      legend.title = element_blank()
+      legend.title = element_blank(), 
+      strip.background = element_blank()
     )
   
   p2 <- ggplot(toplo, aes(x = mo, y = strscnt, group = costa)) +
@@ -901,7 +980,8 @@ renderPlot({
     theme_bw(base_family = 'serif', base_size = 16) + 
     theme(
       axis.title.x = element_blank(), 
-      legend.position = 'top'
+      legend.position = 'top', 
+      strip.background = element_blank()
     ) + 
     scale_size(dis) +
     guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4)))
@@ -910,4 +990,289 @@ renderPlot({
 
 }, height = 600, width = 850)
   
+```
+
+### Growth {.tabset .tabset-pills}
+
+```{r}
+grodat <- reactive({
+
+  # inputs
+  chm <- input$chm
+  val <- input$val
+  sta <- input$sta
+
+  dat <- chmdatsum %>% 
+    filter(var %in% chm) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -var, -abu, -typ1, -typ2, -typ3, -stdsz, -`% type II&III`) %>%
+    gather('chemvar', 'chemval', ave:dlt) %>% 
+    filter(chemvar %in% val) %>% 
+    filter(station %in% sta)
+  
+  return(dat)
+  
+})
+
+gromod <- reactive({
+  
+  # input
+  grodat <- grodat()
+  
+  # complete model
+  all <- lm(avesz ~ chemval, data = grodat)
+  
+  # by cohort years
+  bycohortyr <- grodat %>% 
+    group_by(cohortyr) %>% 
+    nest %>% 
+    mutate(
+      mod = purrr::map(data, function(x){ try({lm(avesz ~ chemval, data = x)})})
+    )
+  bycohortyrout <- pull(bycohortyr, mod)
+  names(bycohortyrout) <- pull(bycohortyr, cohortyr)
+  
+  # by seasons
+  byseas <- grodat %>% 
+    group_by(mo) %>% 
+    nest %>% 
+    mutate(
+      mod = purrr::map(data, function(x){ try({lm(avesz ~ chemval, data = x)})})
+    )
+  byseasout <- pull(byseas, mod)
+  names(byseasout) <- pull(byseas, mo)
+
+  # combine all    
+  out <- c(
+    all = list(all), 
+    bycohortyrout,
+    byseasout
+  )
+  
+  return(out)
+  
+})
+```
+
+```{r}
+renderPlot({
+  
+  # inputs
+  grodat <- grodat()
+  chmlab <- chmlab()
+
+  p <- ggplot(grodat, aes(x = chemval, y = avesz)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se =T, colour = 'red') +
+    geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
+    ylab("Average size") +
+    xlab(chmlab) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 400, width = 400)
+
+renderPrint({lapply(gromod()['all'], summary)})
+
+renderPlot({
+  
+  # inputs
+  grodat <- grodat()
+  chmlab <- chmlab()
+
+  p <- ggplot(grodat, aes(x = chemval, y = avesz)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
+    facet_grid(~ cohortyr) + #, scales = 'free') +
+    ylab("Average size") +
+    xlab(chmlab) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+renderPrint({lapply(gromod()[c('2014', '2015', '2016')], summary)})
+
+renderPlot({
+  
+  # inputs
+  grodat <- grodat()
+  chmlab <- chmlab()
+
+  p <- ggplot(grodat, aes(x = chemval, y = avesz)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    geom_label(aes(fill = cohortyr, group = station, label = station), size = 3, colour = 'grey') +
+    facet_grid(~ mo) + #, scales = 'free') +
+    ylab("Average size") +
+    xlab(chmlab) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+renderPrint({lapply(gromod()[c('Jul', 'Sep', 'Apr')], summary)})
+```
+
+### Abundance {.tabset .tabset-pills}
+
+```{r}
+abudat <- reactive({
+
+  # inputs
+  chm <- input$chm
+  val <- input$val
+  sta <- input$sta
+
+  dat <- chmdatsum %>% 
+    filter(var %in% chm) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(-lon, -lat, -var, -typ1, -typ2, -typ3, -avesz, -stdsz, -`% type II&III`) %>%
+    gather('chemvar', 'chemval', ave:dlt) %>% 
+    filter(chemvar %in% val) %>% 
+    filter(station %in% sta)
+  
+  return(dat)
+  
+})
+
+abumod <- reactive({
+  
+  # input
+  abudat <- abudat()
+  
+  # complete model
+  all <- lm(log10(abu) ~ chemval, data = abudat)
+  
+  # by cohort years
+  bycohortyr <- abudat %>% 
+    group_by(cohortyr) %>% 
+    nest %>% 
+    mutate(
+      mod = purrr::map(data, function(x){ try({lm(log10(abu) ~ chemval, data = x)})})
+    )
+  bycohortyrout <- pull(bycohortyr, mod)
+  names(bycohortyrout) <- pull(bycohortyr, cohortyr)
+  
+  # by seasons
+  byseas <- abudat %>% 
+    group_by(mo) %>% 
+    nest %>% 
+    mutate(
+      mod = purrr::map(data, function(x){ try({lm(log10(abu) ~ chemval, data = x)})})
+    )
+  byseasout <- pull(byseas, mod)
+  names(byseasout) <- pull(byseas, mo)
+
+  # combine all    
+  out <- c(
+    all = list(all), 
+    bycohortyrout,
+    byseasout
+  )
+  
+  return(out)
+  
+})
+```
+
+```{r}
+renderPlot({
+  
+  # inputs
+  abudat <- abudat()
+  chmlab <- chmlab()
+
+  p <- ggplot(abudat, aes(x = chemval, y = abu)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se =T, colour = 'red') +
+    geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
+    ylab("Average size") +
+    xlab(chmlab) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    scale_y_log10('log10(abu)')
+
+  return(p)
+  
+}, height = 400, width = 400)
+
+renderPrint({lapply(abumod()['all'], summary)})
+
+renderPlot({
+  
+  # inputs
+  abudat <- abudat()
+  chmlab <- chmlab()
+
+  p <- ggplot(abudat, aes(x = chemval, y = abu)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
+    facet_grid(~ cohortyr) + #, scales = 'free') +
+    ylab("Average size") +
+    xlab(chmlab) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    scale_y_log10('log10(abu)')
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+renderPrint({lapply(abumod()[c('2014', '2015', '2016')], summary)})
+
+renderPlot({
+  
+  # inputs
+  abudat <- abudat()
+  chmlab <- chmlab()
+
+  p <- ggplot(abudat, aes(x = chemval, y = abu)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    geom_label(aes(fill = cohortyr, group = station, label = station), size = 3, colour = 'grey') +
+    facet_grid(~ mo) + #, scales = 'free') +
+    ylab("Average size") +
+    xlab(chmlab) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    ) + 
+    scale_y_log10('log10(abu)')
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+renderPrint({lapply(abumod()[c('Jul', 'Sep', 'Apr')], summary)})
 ```

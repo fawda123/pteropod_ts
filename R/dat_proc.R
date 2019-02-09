@@ -57,7 +57,9 @@ abuadd <- read_excel('raw/pteropod abundances 2014.xlsx') %>%
   mutate(date = ymd(date)) %>% 
   select(-dy) %>%
   select(date, yr, cohortyr, mo, station, abu) %>% 
-  na.omit
+  na.omit %>% 
+  group_by(date, yr, cohortyr, mo, station) %>% 
+  summarise(abu = mean(abu))
 
 # join with old abudat
 abuadd <- biodat %>% 
@@ -65,7 +67,7 @@ abuadd <- biodat %>%
   na.omit %>% 
   bind_rows(abuadd, .)
 
-# join with complete biodat
+# join with complete biodat, add abu pa
 biodat <- biodat %>% 
   select(-abu) %>% 
   left_join(abuadd, by = c('date', 'yr', 'cohortyr', 'mo', 'station'))
