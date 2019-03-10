@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r message = F, warning = F, results = 'hide', echo = F}
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, echo = F, fig.path = 'figs/', results = 'hide')
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, echo = F, fig.path = 'figs/')
 
 library(tidyverse)
 library(gridExtra)
@@ -24,31 +24,17 @@ library(mapview)
 library(shiny)
 library(mapproj)
 
+prj <- 4326 # wgs84
+
 source('R/funcs.R')
-source('keys.R')
 
 data(chmdatsum)
 data(chmdatraw)
 data(biodat)
 ```
 
-```{r, fig.height = 6, fig.width = 4}
-locs <- chmdatsum %>% 
-  select(station, lon, lat) %>% 
-  unique 
-
-# get the extent
-dat_ext <- make_bbox(locs$lon, locs$lat, f = 0.1)
-
-# get the base map using the extent
-bsmap <-  get_map(location = dat_ext, maptype = 'satellite', zoom = 9)
-
-# plot the basemap
-ggmap(bsmap) + 
-  geom_point(data = locs, aes(x = lon, y = lat), colour = 'tomato1', size = 8) +
-  geom_text(data = locs, aes(x = lon, y = lat, label = station)) + 
-  theme_bw(base_family = 'serif') +
-  theme(axis.title = element_blank())
+```{r statmap, out.width = "80%", fig.align = 'center', fig.cap = "Locations of stations in the Salish Sea where pteropod and environmental sampling occurred.  Samples were collected in April, July, and September from 2014 to 2016."}
+knitr::include_graphics('figs/statmap.jpg')
 ```
 
 Figures: 
@@ -65,7 +51,7 @@ Figures:
 
 * interaction plots of o2 and min aragonite
 
-```{r pcafig}
+```{r pcafig, results = 'hide'}
 
 # cluster
 clsts <- tibble(
