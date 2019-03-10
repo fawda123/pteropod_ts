@@ -12,14 +12,61 @@ library(glue)
 library(lubridate)
 library(ggord)
 library(patchwork)
+library(sf)
+library(ggmap)
+library(mapview)
+library(readxl)
+library(gridExtra)
+library(vegan)
+library(ggdendro)
+library(dendextend)
+library(mapview)
+library(shiny)
+library(mapproj)
 
 source('R/funcs.R')
+source('keys.R')
+
 data(chmdatsum)
 data(chmdatraw)
 data(biodat)
 ```
 
+```{r, fig.height = 6, fig.width = 4}
+locs <- chmdatsum %>% 
+  select(station, lon, lat) %>% 
+  unique 
+
+# get the extent
+dat_ext <- make_bbox(locs$lon, locs$lat, f = 0.1)
+
+# get the base map using the extent
+bsmap <-  get_map(location = dat_ext, maptype = 'satellite', zoom = 9)
+
+# plot the basemap
+ggmap(bsmap) + 
+  geom_point(data = locs, aes(x = lon, y = lat), colour = 'tomato1', size = 8) +
+  geom_text(data = locs, aes(x = lon, y = lat, label = station)) + 
+  theme_bw(base_family = 'serif') +
+  theme(axis.title = element_blank())
+```
+
+Figures: 
+
+* station map
+
+* cluster results and dissimilarity matrices by season
+ 
+* ts of aragontie simulatiorns or obs. time series (e.g., cohort years by month, station)
+
+* PCA figure
+
+* type 3 dissolution vs min ara, by season/year
+
+* interaction plots of o2 and min aragonite
+
 ```{r pcafig}
+
 # cluster
 clsts <- tibble(
   station = c(402, 38, 28, 22, 12, 8, 4),
@@ -102,100 +149,3 @@ dev.off()
 #   guides(size = guide_legend(title = '% type 3'))
 ```
 
-## Growth {.tabset}
-
-### All
-```{r, fig.height = 5, fig.width = 5}
-ggplot(biodat, aes(x = typ3, y = avesz)) + 
-  geom_point() + 
-  geom_smooth(method = 'lm') + 
-  theme_bw(base_family = 'serif', base_size = 14)
-```
-```{r, results = 'show'}
-summary(lm(avesz ~ typ3, data = biodat))
-```
-
-### By year
-```{r, fig.height = 5, fig.width = 14}
-ggplot(biodat, aes(x = typ3, y = avesz)) + 
-  geom_point() + 
-  facet_wrap(~cohortyr, ncol = 3) +
-  geom_smooth(method = 'lm') + 
-  theme_bw(base_family = 'serif', base_size = 14)
-```
-```{r, results = 'show'}
-tomod <- biodat %>% 
-  group_by(cohortyr) %>% 
-  nest
-tomoddt <- pull(tomod, data)
-names(tomoddt) <- pull(tomod, cohortyr)
-lapply(tomoddt, function(x) try({summary(lm(avesz ~ typ3, data = x))}))
-```
-
-### By month
-```{r, fig.height = 5, fig.width = 14}
-ggplot(biodat, aes(x = typ3, y = avesz)) + 
-  geom_point() + 
-  facet_wrap(~mo, ncol = 3) +
-  geom_smooth(method = 'lm') + 
-  theme_bw(base_family = 'serif', base_size = 14)
-```
-```{r, results = 'show'}
-tomod <- biodat %>% 
-  group_by(mo) %>% 
-  nest
-tomoddt <- pull(tomod, data)
-names(tomoddt) <- pull(tomod, mo)
-lapply(tomoddt, function(x) try({summary(lm(avesz ~ typ3, data = x))}))
-```
-
-## Abundance {.tabset}
-
-### All
-
-```{r, fig.height = 5, fig.width = 5}
-ggplot(biodat, aes(x = typ3, y = abu)) + 
-  geom_point() + 
-  geom_smooth(method = 'lm') + 
-  theme_bw(base_family = 'serif', base_size = 14) + 
-  scale_y_log10()
-```
-```{r, results = 'show'}
-summary(lm(log10(abu) ~ typ3, data = biodat))
-```
-
-### By year
-```{r, fig.height = 5, fig.width = 14}
-ggplot(biodat, aes(x = typ3, y = abu)) + 
-  geom_point() + 
-  facet_wrap(~cohortyr, ncol = 3) +
-  geom_smooth(method = 'lm') + 
-  scale_y_log10() + 
-  theme_bw(base_family = 'serif', base_size = 14)
-```
-```{r, results = 'show'}
-tomod <- biodat %>% 
-  group_by(cohortyr) %>% 
-  nest
-tomoddt <- pull(tomod, data)
-names(tomoddt) <- pull(tomod, cohortyr)
-lapply(tomoddt, function(x) try({summary(lm(log10(abu) ~ typ3, data = x))}))
-```
-
-### By month
-```{r, fig.height = 5, fig.width = 14}
-ggplot(biodat, aes(x = typ3, y = abu)) + 
-  geom_point() + 
-  facet_wrap(~mo, ncol = 3) +
-  geom_smooth(method = 'lm') + 
-  scale_y_log10() + 
-  theme_bw(base_family = 'serif', base_size = 14)
-```
-```{r, results = 'show'}
-tomod <- biodat %>% 
-  group_by(mo) %>% 
-  nest
-tomoddt <- pull(tomod, data)
-names(tomoddt) <- pull(tomod, mo)
-lapply(tomoddt, function(x) try({summary(lm(log10(abu) ~ typ3, data = x))}))
-```
