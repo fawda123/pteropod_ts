@@ -281,6 +281,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -288,14 +291,74 @@ button.code-folding-btn:focus {
 <div class="container-fluid main-container">
 
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -328,7 +391,7 @@ $(document).ready(function () {
 ## (Intercept) 0.511737   0.069216   7.393  5.3e-07 ***
 ## typ3        0.003163   0.001938   1.632    0.119    
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.1938 on 19 degrees of freedom
 ##   (35 observations deleted due to missingness)
@@ -359,7 +422,7 @@ $(document).ready(function () {
 ## (Intercept) 0.425765   0.120256   3.540   0.0166 *
 ## typ3        0.001555   0.002584   0.602   0.5737  
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.141 on 5 degrees of freedom
 ##   (14 observations deleted due to missingness)
@@ -381,7 +444,7 @@ $(document).ready(function () {
 ## (Intercept) 0.477337   0.055077   8.667 1.64e-06 ***
 ## typ3        0.008309   0.001910   4.349 0.000946 ***
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.1368 on 12 degrees of freedom
 ## Multiple R-squared:  0.6118, Adjusted R-squared:  0.5795 
@@ -404,7 +467,7 @@ $(document).ready(function () {
 ## (Intercept) 0.550563   0.103571   5.316  0.00315 **
 ## typ3        0.007231   0.003047   2.373  0.06368 . 
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.1733 on 5 degrees of freedom
 ##   (14 observations deleted due to missingness)
@@ -426,7 +489,7 @@ $(document).ready(function () {
 ## (Intercept)  0.42725    0.05222   8.182 0.000443 ***
 ## typ3         0.00862    0.00232   3.716 0.013774 *  
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.09204 on 5 degrees of freedom
 ##   (14 observations deleted due to missingness)
@@ -448,7 +511,7 @@ $(document).ready(function () {
 ## (Intercept) 0.425765   0.120256   3.540   0.0166 *
 ## typ3        0.001555   0.002584   0.602   0.5737  
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.141 on 5 degrees of freedom
 ##   (7 observations deleted due to missingness)
@@ -496,7 +559,7 @@ $(document).ready(function () {
 ## (Intercept)  0.738846   0.354317   2.085   0.0667 .
 ## typ3        -0.006983   0.014711  -0.475   0.6463  
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.8171 on 9 degrees of freedom
 ##   (10 observations deleted due to missingness)
@@ -546,7 +609,7 @@ $(document).ready(function () {
 ## (Intercept)  0.849239   0.373190   2.276   0.0439 *
 ## typ3        -0.005335   0.013028  -0.410   0.6900  
 ## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 0.8958 on 11 degrees of freedom
 ##   (8 observations deleted due to missingness)

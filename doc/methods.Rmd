@@ -37,20 +37,6 @@ S_{yr} = \sum_{i \in month} \Omega_{obs, i} - \Omega_{crit}
 
 For each cohort-year at each station, $S_{yr}$ was estimated as the cumulative sum across the months for the observed omega saturation state $\Omega_{obs, i}$ minus a critical threshold $\Omega_{crit}$ defined as under-saturated. The critical threshold for aragonite saturation state was fixed at $\Omega_{crit} = 1$, although the approach is flexible and different values could be tested to explore associations with pteropod response measures.
 
-Figures: 
-
-* station map
-
-* cluster results and dissimilarity matrices by season
- 
-* ts of aragontie simulatiorns or obs. time series (e.g., cohort years by month, station)
-
-* PCA figure
-
-* type 3 dissolution vs min ara, by season/year
-
-* interaction plots of o2 and min aragonite
-
 Bednarsek, N., Feely, R.A., Beck, M.W., Glippa, O., Kanerva, M., Engstrom-Ost, J. 2018. El Nino-related thermal stress coupled with upwelling-related ocean acidification negatively impacts cellular to population-level responses in pteropods along the California Current system with implications for increased bioenergetic costs. Frontiers in Marine Science. 5(486):1-17. 
 
 Hartigan, J.A. 1975. Clustering Algorithms. New York: Wiley.
