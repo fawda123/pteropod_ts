@@ -11,11 +11,31 @@ link-citations: true
 
 Biological and chemical conditions were sampled at seven sites in the Puget Sound over three years with three sample events per year (April, July, and October, n = 56).  Biological samples included XYZ.  Chemical conditions were sampled with CTD sensor profiles from the surface to the maximum depth at each station.  For each cast, chemical parameters were measured in situ or estimated in the laboratory from Niskin samples collected at each depth.  Chemical data included water temperature (C), dissolved oxygen ($\mu mol kg^{-1}$), pCO$^2$ ($\mu atm$), CO$_{3}^{2-}$ ($\mu mol kg^{-1}$), pH, salinity (psu), and aragonite saturation state ($\Omega$). For each cast, water chemistry variables were summarized to describe the minimum, average, maximum, and standard deviation of values across the depth profile.  These estimates were used to describe the range of conditions that pteropods may be exposed to in the water column at each station.  
 
-Environmental data at the monitoring sites were evaluated to identify similarities among chemical conditions between sites related to spatial, seasonal, and annual differences that could explain variation in pteropod response measures.  Salinity, temperature, oxygen, and aragonite saturation state observations were evaluated to describe variation among sites related to oceanic influences and dominant acidificaion gradients.  Sites were clustered using the average chemical values for each site across years for the same month to identify dominant seasonal patterns.  Hierarchical clustering was used that was based on the unweighted pair group method and euclidean dissimilarity measures of standardized variables between sites.  This produced a dendrogram that was used to manually identify dominant groupings of sites.  PCA....
+# Site groupings based on environmental conditions
 
-how dissolution was compared with env variables  - individual regression analyses by season and year, also co-occurrence models of oxy/temp with aragonite 
+Environmental data at the monitoring sites were evaluated to identify similarities among chemical conditions between sites related to spatial, seasonal, and annual differences that could explain variation in pteropod response measures.  Salinity, temperature, oxygen, and aragonite saturation state observations were evaluated to describe variation among sites related to oceanic influences and dominant acidification gradients.  Sites were clustered using the average chemical values for each site across years for the same month to identify dominant seasonal patterns.  Hierarchical clustering based on the unweighted pair group method and euclidean dissimilarity measures of standardized variables was used to identify groupings between sites (Hartigan 1975, Oksanen et al. 2018).  This produced a dendrogram across the three sample years for each month that was used to identify dominant groupings of sites.  Principal components analysis was also used to similarly identify dominant environmental gradients in salinity, pH, temperature, and aragonite saturate state across the stations and sample period (Venable and Ripley 2002).
 
-Cumulative stress measures - how, with equations = S = D + M
+# Comparisons of pteropod response measures with enviromental conditions
+
+Pteropod dissolution rates were compared with environmental data at each site to evaluate associations that could explain differences among the spatial groupings identified through clustering.  Because the collected data represented time series of biological and chemical observations, a primary goal of the analysis was to evaluate changes in pteropod response to environmental conditions as a function of the frequency and magnitude of exposure duration to dominant environmental gradients across the sites.  For each time series at each site, a variable was defined that described the "cohort-year" to quantify an approximate annual time period from the end of spring spawning to just prior to spring spawning the following year.  For example, July 2015, September 2015, and April 2016 were assigned a cohort-year of 2015 to track individuals that hatched in spring 2015 and matured to adults by spring 2016.  This variable provided a basis of comparison for exposure of pteropod cohorts throughout their life cycle to seasonal environmental gradients and minimized the comparison of exposure effects across different cohorts.  Although secondary spawning events can occur in the Fall, preliminary analyses indicated that cohort years based on spring spawning events had more consistent and interpretable associations with environmental conditions.
+
+For each cohort-year, dissolution rates were compared to environmental conditions using the summarized data from the CTD sensor profiles.  Comparisons were made based on visual assessments of trends at each site and from linear regression analyses to quantify assocations between dissolution rates and enviornmental data.  Analyses were conducted using combined observations for all sites, as well as separate analyses using observations grouped by month (e.g., April observations across all cohort-years) or by year (e.g, 2015 cohort-year observations across months) to characterize potential seasonal or annual differences.  Simple bivariate comparisons were evaluated with linear models (e.g., dissolution vs. saturation state), followed by a comparison of co-occuring stressors on pteropod response measures.  The latter analysis followed methods in Bednarsek et al. 2018 to characterize potentially additive or synergistic associations of environmental conditions with dissolution rates.  These models were developed to describe dissolution rates relative to main effects for each of two enviromental variables and a third term for the interaction between the pair.  Models with variance inflation factors greater than ten for pairs of environmental variables were not considered (Zuur et al. 2007, Bednarsek et al. 2018).  
+
+The time series observations of pteropod response measures with environmental conditions measured for each cohort-year also provided an opportunity to evaluate cumulative exposure effects, as compared to "snapshot" comparisons of observed environmental conditions with dissolution rates in the regression analyses.  An empirical framework was developed that characterized the duration and magnitude of environmental conditions that a cohort was exposed to throughout its lifecycle.  For example, individuals exposed to omega saturation states for longer periods of time (duration) that were very under-saturated (magnitude, e.g., $\Omega << 1$) throughout the cohort-year were expected to have greater dissolution rates expressed in adults at the end of the cohort-year. Dissolution rates may also vary if individuals were exposed to varying duration and/or magnitude of OA conditions, e.g., effects could vary for extremely under-saturated conditions that occurred for a short period of time as compared to slightly under-saturated conditions for a longer period of time. The empirical framework was developed to quantify these differences in exposure:
+
+\begin{equation}
+S = D + M
+(\#eq:strshr)
+\end{equation}
+
+whereby cumulative stress ($S$) for each cohort-year is equal to the duration ($D$) and magnitude ($M$) of exposure.  Explicitly, the duration and magnitude was estimated as the cumulative sum within each cohort-year for which omega was under-saturated. 
+
+\begin{equation}
+S_{yr} = \sum_{i \in month} \Omega_{obs, i} - \Omega_{crit}
+(\#eq:strlng)
+\end{equation}
+
+For each cohort-year at each station, $S_{yr}$ was estimated as the cumulative sum across the months for the observed omega saturation state $\Omega_{obs, i}$ minus a critical threshold $\Omega_{crit}$ defined as under-saturated. The critical threshold for aragonite saturation state was fixed at $\Omega_{crit} = 1$, although the approach is flexible and different values could be tested to explore associations with pteropod response measures.
 
 Figures: 
 
@@ -30,3 +50,13 @@ Figures:
 * type 3 dissolution vs min ara, by season/year
 
 * interaction plots of o2 and min aragonite
+
+Bednarsek, N., Feely, R.A., Beck, M.W., Glippa, O., Kanerva, M., Engstrom-Ost, J. 2018. El Nino-related thermal stress coupled with upwelling-related ocean acidification negatively impacts cellular to population-level responses in pteropods along the California Current system with implications for increased bioenergetic costs. Frontiers in Marine Science. 5(486):1-17. 
+
+Hartigan, J.A. 1975. Clustering Algorithms. New York: Wiley.
+
+Oksanen, J., Blanchet, F.G., Friendly, M., Kindt, R., Legendre, P., McGlinn, D., Minchin, P.R., O'Hara, R.B., Simpson, G.L., Solymos, P., Henry, H., Stevens, H., Szoecs, E., Wagner, H. 2018. vegan: Community Ecology Package. R package version 2.5-2. https://CRAN.R-project.org/package=vegan
+
+Venables, W.N., Ripley, B.D. 2002. Modern Applied Statistics with S, Springer-Verlag.
+
+Zuur, A.F., Ieno, E.N., Smith, G.M. 2007. Analysing Ecological Data. New York: Springer.
