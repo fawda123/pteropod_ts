@@ -24,6 +24,7 @@ library(mapview)
 library(shiny)
 library(mapproj)
 library(viridis)
+library(colorspace)
 
 prj <- 4326 # wgs84
 
@@ -49,9 +50,11 @@ dat_ext <- make_bbox(locs$lon, locs$lat, f = 0.2)
 # get the base map using the extent
 bsmap <-  get_map(location = dat_ext, maptype = 'terrain-background', zoom = 8)
 
-# viridis colors 
+# viridis colors with darker yellow
 colmst <- viridis(3)
 colmst[3] <- '#FFB90F'
+
+colmos <- diverging_hcl(3, 'Blue-Red')
 ```
 
 ```{r statmap, fig.cap = "Locations of stations in the Puget Sound where pteropod and environmental sampling occurred.  Samples were collected in April, July, and September from 2014 to 2016.", out.width = "80%", fig.align = 'center'}
@@ -246,29 +249,17 @@ toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', 
     
   )
 
-png('figs/clsts.jpg', height = 10, width = 7, units = 'in', res = 300, family = 'serif')
-wrap_elements(toplo$disleg[[1]]) + (toplo$denplo[[1]]+ toplo$displo[[1]] + toplo$mapplo[[1]] + toplo$denplo[[2]] + toplo$displo[[2]] + toplo$mapplo[[2]] + toplo$denplo[[3]] + toplo$displo[[3]] + toplo$mapplo[[3]] + plot_layout(ncol = 3, widths = c(1, 1, .5))) + plot_layout(ncol = 1, heights = c(0.1, 1))
+jpeg('figs/clsts.jpg', height = 9.5, width = 7, units = 'in', res = 300, family = 'serif')
+wrap_elements(toplo$disleg[[1]]) + (toplo$denplo[[1]]+ toplo$displo[[1]] + toplo$mapplo[[1]] + toplo$denplo[[2]] + toplo$displo[[2]] + toplo$mapplo[[2]] + toplo$denplo[[3]] + toplo$displo[[3]] + toplo$mapplo[[3]] + plot_layout(ncol = 3, widths = c(1, 1, .5))) + plot_layout(ncol = 1, heights = c(0.05, 1))
 dev.off()
 
 ```
 
-```{r clstmap, fig.cap = "Clusters.", out.width = "90%", fig.align = 'center'}
+```{r clstmap, fig.cap = "Clustering results of stations based on within-month averages for salinity, water temperature, dissolved oxygen, and aragonite saturation state.  Within-month averages are based on all environmental data collected across the sample years from 2014 to 2016 in the same month.  Results for each month (starting in July the prior year coinciding with spring spawning) are shown as dendrograms for site clustering (left), dissimilarity matrices showing mean Euclidean distances between observations at pairs of sites (middle), and spatial arrangements of the defined clusters (right).  Cluster groups were set at three based on approximate dendrogram separation between sites to explain dominant patterns among enviromental variables.", out.width = "70%", fig.align = 'center'}
 knitr::include_graphics('figs/clsts.jpg')
 ```
 
-Figures: 
-
-* cluster results and dissimilarity matrices by season
- 
-* ts of aragontie simulatiorns or obs. time series (e.g., cohort years by month, station)
-
-* PCA figure
-
-* type 3 dissolution vs min ara, by season/year
-
-* interaction plots of o2 and min aragonite
-
-```{r pcafig, results = 'hide'}
+```{r, results = 'hide'}
 
 # cluster
 clsts <- tibble(
@@ -307,48 +298,120 @@ tomod <- chmsub %>%
 # pc mod
 mod <- prcomp(tomod[ , c('ara', 'oxy', 'sal', 'temp')], scale. = T, center = T)
 
-# plots
-cols <- c('lightgreen', 'lightblue', 'tomato1')
-
 # no labels
-p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F) + 
+p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'darkblue') + 
   scale_size(range = c(2, 8)) +
-  scale_colour_manual(values = cols) + 
-  scale_fill_manual(values = cols) + 
-  guides(size = guide_legend(title = '% type 3')) + 
+  scale_colour_manual(values = colmst) + 
+  scale_fill_manual(values = colmst) + 
+  guides(size = guide_legend(title = '% type III dissolution')) + 
   theme(legend.position = 'top')
 pleg <- g_legend(p1)
 p1 <- p1 + theme(legend.position = 'none')
  
 # with labels
-p2 <- ggord(mod, obslab = T, vec_ext = 4, size = 2, coord_fix = F) 
+p2 <- ggord(mod, obslab = T, vec_ext = 4, size = 1.8, coord_fix = F, labcol = 'darkblue') 
 
-pdf('figs/pcastat.pdf', family = 'serif', height = 5, width = 10)
+jpeg('figs/pcastat.jpg', family = 'serif', height = 4.5, width = 8.5, res = 300, units = 'in')
 grid.arrange(
   pleg,
-  arrangeGrob(p1, p2, ncol = 2, widths = c(1, 1)),
+  arrangeGrob(p1, p2, ncol = 2),
   ncol = 1, heights = c(0.1, 1)
 )
 dev.off()
 
-#  
-# # station, date, variable, averaged
-# tomod <- chmsub %>% 
-#   left_join(biosub, by = c('cohortyr', 'mo', 'station')) %>% 
-#   gather('var', 'val', ara:typ3) %>% 
-#   group_by(station, var) %>% 
-#   summarise(
-#     val = mean(val, na.rm = T)
-#   ) %>% 
-#   spread(var, val) %>%
-#   left_join(clsts, by = 'station')
-# 
-# mod <- prcomp(tomod[ , c('ara', 'oxy', 'sal', 'temp')], scale. = T, center = T)
-# ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3) + 
-#   scale_size(range = c(1, 6)) +
-#   ggtitle('All dates') +
-#   scale_colour_manual(values = cols) + 
-#   scale_fill_manual(values = cols) + 
-#   guides(size = guide_legend(title = '% type 3'))
 ```
+
+```{r pcafig, fig.cap = "Results of prinicipal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap) with site points sized by measured type III dissolution for pteropods collected at the same time.  The right plot shows the sites with text identifies for the sit number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
+knitr::include_graphics('figs/pcastat.jpg')
+```
+
+```{r, results = 'hide'}
+strdat <- chmdatsum %>% 
+  filter(var %in% 'ara') %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
+  gather('ara', 'chmval', ave:dlt) %>% 
+  filter(ara %in% 'min') %>% 
+  mutate(
+    thrsh = 1,
+    aracat = ifelse(chmval < thrsh, 1, 0),
+    aradff = thrsh - chmval
+    ) %>% 
+  unite('costa', cohortyr, station, remove = F) %>% 
+  group_by(costa) %>% 
+  mutate(
+    strsdis = cumsum(aracat),
+    strscnt = cumsum(aradff)
+  ) 
+
+# bio
+toplo1 <- biodat %>% 
+  select(date, yr, cohortyr, mo, station, typ1, typ2, typ3) %>% 
+  gather('diss', 'val', typ1:typ3) %>% 
+  filter(diss %in% 'typ3')
+
+p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
+  geom_line(aes(group = cohortyr)) +
+  geom_point(aes(fill = mo), alpha = 0.7, size = 4, pch = 21) +
+  facet_grid(station~.) +
+  theme_bw(base_family = 'serif', base_size = 12) +
+  theme(
+    strip.background = element_blank(), 
+    axis.title.x = element_blank(), 
+    legend.title = element_blank(),
+    axis.text.x  = element_text(size = 8, angle = 45, hjust = 1),
+    # panel.grid = element_blank(), 
+    legend.position = 'none'
+    ) +
+  ylab('% type III dissolution') + 
+  scale_x_discrete(labels = format(sort(unique(toplo1$date)), '%Y-%m')) + 
+  scale_fill_manual(values = colmos)
+
+# chem
+toplo2 <- chmdatsum %>% 
+  filter(var %in% 'ara')
+
+p2 <- ggplot(toplo2, aes(x = factor(date), y = min)) +
+  geom_segment(data = strdat, aes(y = 1, yend = chmval, xend = factor(date), colour = 'Cumulative stress difference'), linetype = 'dotted', size = 0.9) +
+  geom_line(aes(group = cohortyr)) +
+  geom_point(aes(fill = mo), alpha = 0.7, size  = 4, pch = 21) +
+  facet_grid(station~.) +
+  theme_bw(base_family = 'serif', base_size = 12) + 
+  theme(
+    strip.background = element_blank(), 
+    axis.title.x = element_blank(), 
+    # legend.title = element_blank(),
+    axis.text.x  = element_text(size = 8, angle = 45, hjust = 1),
+    # panel.grid = element_blank(), 
+    legend.position = 'top'
+    ) +
+  guides(guide_legend) +
+  scale_color_discrete(name="") +
+  scale_fill_manual('Cohort months', values = colmos) +
+  ylab(expression("Minimum observed  "*Omega)) + 
+  scale_x_discrete(labels = format(sort(unique(toplo2$date)), '%Y-%m')) + 
+  geom_hline(yintercept = 1, colour = 'tomato1', size = 1, alpha = 0.7) +
+  geom_text(data = strdat, aes(y = 1, label = round(strscnt, 1)), colour = 'tomato1', vjust = 1.2, size = 3, hjust = -0.2)
+
+pleg <- g_legend(p2)
+p2 <- p2 + theme(legend.position = 'none')
+
+jpeg('figs/obsdat.jpg', height = 7, width = 7, units = 'in', res = 300, family = 'serif')
+wrap_elements(pleg) + 
+  (p1 + p2 + plot_layout(ncol = 2)) + 
+  plot_layout(ncol = 1, heights = c(0.05, 1))
+dev.off()
+```
+
+```{r obsdat, fig.cap = "Observed data", out.width = "80%", fig.align = 'center'}
+knitr::include_graphics('figs/obsdat.jpg')
+```
+
+Figures: 
+
+* type 3 dissolution vs min ara, by season/year
+
+* interaction plots of o2 and min aragonite
+
+
 

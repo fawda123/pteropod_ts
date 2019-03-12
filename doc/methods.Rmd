@@ -31,7 +31,7 @@ S = D + M
 whereby cumulative stress ($S$) for each cohort-year is equal to the duration ($D$) and magnitude ($M$) of exposure.  Explicitly, the duration and magnitude was estimated as the cumulative sum within each cohort-year for which omega was under-saturated. 
 
 \begin{equation}
-S_{yr} = \sum_{i \in month} \Omega_{obs, i} - \Omega_{crit}
+S_{yr} = \sum_{i \in month} \Omega_{crit} - \Omega_{obs, i}
 (\#eq:strlng)
 \end{equation}
 
