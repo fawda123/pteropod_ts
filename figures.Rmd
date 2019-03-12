@@ -70,7 +70,7 @@ knitr::include_graphics('figs/statmap.jpg')
 
 ## Cluster analyses
 
-[download](figs/clstmap.jpg)
+[download](figs/clsts.jpg)
 ```{r, results = 'hide'}
 toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
@@ -333,7 +333,7 @@ dev.off()
 
 ## PCA 
 
-[download](figs/pcafig.jpg)
+[download](figs/pcastat.jpg)
 ```{r pcafig, fig.cap = "Results of prinicipal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the sites with text identifiers for the site number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/pcastat.jpg')
 ```
