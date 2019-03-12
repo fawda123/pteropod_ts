@@ -13,7 +13,7 @@ g_legend <- function(a.gplot){
 # pos is where the labels are, left or right of effects line
 # fct is scaling factor for labels from end of lines
 get_pldat <- function(modin, cvar, pos = c('left', 'right'), fct = NULL){
-  
+
   pos <- match.arg(pos)
   
   # crossing of model data by range
@@ -21,9 +21,9 @@ get_pldat <- function(modin, cvar, pos = c('left', 'right'), fct = NULL){
     .[, -1] %>% 
     data.frame %>% 
     as.list %>% 
-    map(range) %>%
-    map(function(x) seq(x[1], x[2], length = 100))
-  
+    purrr::map(range) %>%
+    purrr::map(function(x) seq(x[1], x[2], length = 100))
+
   # quantiles for cvar
   x[[cvar]] <- modin$model[[cvar]]%>% quantile(., c(0, 1))
   

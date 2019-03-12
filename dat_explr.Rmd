@@ -422,9 +422,17 @@ renderPrint({
   )
   
   # input
-  lmmod <- lmmod()
+  lmmod <- lmmod()$July
   
-  summary(lmmod$July)
+  vifval <- lmmod$model[,-1] %>% 
+    lm(oxy ~ ., data= .) %>% 
+    summary %>% 
+    .$r.squared
+  vifval <- 1 / (1 - vifval)
+  vifval <- round(vifval, 2)  
+
+  print(paste('VIF:', vifval))
+  summary(lmmod)
   
 })
 
@@ -475,9 +483,17 @@ renderPrint({
   )
   
   # input
-  lmmod <- lmmod()
+  lmmod <- lmmod()$September
   
-  summary(lmmod$September)
+  vifval <- lmmod$model[,-1] %>% 
+    lm(oxy ~ ., data= .) %>% 
+    summary %>% 
+    .$r.squared
+  vifval <- 1 / (1 - vifval) 
+  vifval <- round(vifval, 2)  
+  
+  print(paste('VIF:', vifval))
+  summary(lmmod)
   
 })
 
@@ -528,9 +544,17 @@ renderPrint({
   )
   
   # input
-  lmmod <- lmmod()
+  lmmod <- lmmod()$April
   
-  summary(lmmod$April)
+  vifval <- lmmod$model[,-1] %>% 
+    lm(oxy ~ ., data= .) %>% 
+    summary %>% 
+    .$r.squared
+  vifval <- 1 / (1 - vifval)
+  vifval <- round(vifval, 2)  
+  
+  print(paste('VIF:', vifval))
+  summary(lmmod)
   
 })
 

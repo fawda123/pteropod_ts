@@ -425,6 +425,7 @@ knitr::include_graphics('figs/obsdat.jpg')
 
 ## Dissolution vs aragonite
 
+[download](figs/disvara.jpg)
 ```{r, results = 'hide'}
 toplo <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
@@ -470,7 +471,7 @@ p2 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
   guides(colour = guide_legend(override.aes = list(size = 4, alpha = 0.6)))
 
 jpeg('figs/disvara.jpg', height = 6, width = 7, units = 'in', res = 300, family = 'serif')
-wrap_elements(textGrob('         % type III dissolution', rot = 90)) + (p1 + p2 + wrap_elements(textGrob(expression("Minimum observed "*Omega))) + plot_layout(ncol = 1, heights = c(1, 1, 0.1))) + plot_layout(ncol = 2, widths = c(0.1, 1))
+wrap_elements(textGrob('           % type III dissolution', rot = 90)) + (p1 + p2 + wrap_elements(textGrob(expression("Minimum observed "*Omega))) + plot_layout(ncol = 1, heights = c(1, 1, 0.1))) + plot_layout(ncol = 2, widths = c(0.1, 1))
 dev.off()
 ```
 
@@ -478,9 +479,143 @@ dev.off()
 knitr::include_graphics('figs/disvara.jpg')
 ```
 
-Figures: 
+## oxygen and aragonite 
 
-* interaction plots of o2 and min aragonite
+[download](figs/oxyint.jpg)
+```{r results = 'hide'}
+# input
+oxydat <- chmdatsum %>% 
+  filter(var %in% c('ara', 'oxy', 'araund')) %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+  gather('dissvar', 'dissval', typ1:typ3) %>% 
+  gather('chemvar', 'chemval', ave:dlt) %>% 
+  filter(dissvar %in% 'typ3')
 
+plo1dat <- oxydat %>% 
+  filter(var %in% 'araund' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'ave') %>% 
+  select(-chemvar) %>% 
+  spread(var, chemval) %>% 
+  filter(mo %in% c('Jul')) %>% 
+  mutate(araund = 100 * araund)
+
+plo2dat <- oxydat %>% 
+  filter(var %in% 'ara' & chemvar %in% 'rng' | var %in% 'oxy' & chemvar %in% 'ave') %>% 
+  select(-chemvar) %>% 
+  spread(var, chemval) %>% 
+  filter(mo %in% c('Jul'))
+
+plo1mod <- lm(dissval ~ araund * oxy, data = plo1dat)
+plo2mod <- lm(dissval ~ ara + oxy, data = plo2dat)
+
+# colors
+cols <- RColorBrewer::brewer.pal(9, 'RdBu')
+  
+# get data to plot
+pldat <- get_pldat(plo1mod, 'oxy', fct = 1.02, pos = 'right') 
+pl1a <- pldat[[1]]
+pl1b <- pldat[[2]]
+  
+# names for aes_string
+nms <- names(pl1a)
+p1 <- ggplot() +
+  geom_ribbon(data = pl1a, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+  geom_line(data = pl1a, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+  geom_text(data = pl1b, aes(x= x, y = y, label = lab), hjust = 0) +
+  theme_bw() +
+  scale_x_continuous('% water column undersaturated', limits = c(0, 95)) +
+  scale_colour_gradientn(expression(paste('Average ',O[2])), colours = cols) + 
+  theme(
+    axis.title.y = element_blank(),
+    legend.position = 'none'
+  )
+
+# get data to plot
+pldat <- get_pldat(plo2mod, 'oxy', pos = 'right', fct = 1.02) 
+pl2a <- pldat[[1]]
+pl2b <- pldat[[2]]
+  
+# names for aes_string
+nms <- names(pl2a)
+p2 <- ggplot() +
+  geom_ribbon(data = pl2a, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+  geom_line(data = pl2a, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+  geom_text(data = pl2b, aes(x= x, y = y, label = lab), hjust = 0) +
+  theme_bw() +
+  scale_x_continuous(expression('Observed range for '*Omega), limits = c(0.3, 2.65)) +
+  scale_colour_gradientn(expression(paste('Average ',O[2])), colours = cols) + 
+  theme(axis.title.y = element_blank())
+pleg <- g_legend(p2)
+p2 <- p2 + theme(legend.position = 'none') 
+
+jpeg('figs/oxyint.jpg', family = 'serif', height = 6, width = 5, res = 300, units = 'in')
+wrap_elements(textGrob('% type III dissolution        ', rot = 90)) + (p1 + p2 + plot_layout(ncol = 1)) + pleg + plot_layout(ncol = 3, widths = c(0.1, 1, 0.4))
+dev.off()
+```
+
+```{r oxyint, fig.cap = 'Interactions and additive effects of dissolved oxygen and aragonite saturation state on dissolution measures of pteropods. The top plot shows a linear model with a significant interaction between oxygen and the percentage of the water column undersaturated for aragonite, where the latter predictor had a significant main effect on dissolution.  The bottom plot shows a linear model with significant main effects for both oxygen and the observed range of aragonite saturation state in the water column for each site.  The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
+knitr::include_graphics('figs/oxyint.jpg')
+```
+
+## Cumulative stress plot
+
+[download](figs/cumstr.jpg)
+```{r results = 'hide'}
+# rename pteropod response measure to generic
+toplo <- strdat %>% 
+  rename(
+    rsp = 'typ3'
+  )
+  
+p1 <- ggplot(toplo, aes(x = mo, y = strscnt, group = costa)) +
+  geom_line(linetype = 'dotted') +
+  geom_point(aes(colour = mo, group = station), pch = 15, size = 0, alpha = 0) +
+  geom_point(aes(group = station, size = rsp), pch = 15, alpha = 0, colour = 'black', position = position_jitter(width = 0.1, height = 0.1)) +
+  geom_label(aes(fill = mo, group = costa, label = station, size = rsp), colour = 'black', position = position_jitter(width = 0.1, height = 0.1), alpha = 0.6, show.legend = F) +
+  ylab('Cumulative stress magnitude') +
+  facet_wrap(~cohortyr) +
+  theme_bw(base_family = 'serif', base_size = 12) + 
+  theme(
+    axis.title.x = element_blank(), 
+    legend.position = 'top', 
+    strip.background = element_blank()
+  ) + 
+  scale_size('% type III dissolution') +
+  guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4))) + 
+  scale_colour_manual(values = colmos) + 
+  scale_fill_manual(values = colmos) + 
+  guides(
+    colour = guide_legend(title = '', override.aes = list(size = 4, alpha = 0.6)),
+    size = guide_legend(override.aes = list(size = seq(2, 8, length = 4), alpha = 0.6))
+    )
+
+p2 <- ggplot(toplo, aes(x = strscnt, y = rsp)) +
+  geom_line(aes(group = costa), linetype = 'dotted') +
+  geom_point(aes(colour = mo, group = station), pch = 15, size = 0, alpha = 0) +
+  geom_label(aes(fill = mo, group = costa, label = station), size = 3, colour = 'black', alpha = 0.6, show.legend = F) +
+  geom_smooth(method = 'lm', colour = 'black') +
+  xlab('Cumulative stress magnitude') +
+  ylab('% type III dissolution') +
+  facet_wrap(~cohortyr) +
+  theme_bw(base_family = 'serif', base_size = 12) + 
+  theme(
+    legend.position = 'top', 
+    legend.title = element_blank(), 
+    strip.background = element_blank()
+  ) +
+  scale_colour_manual(values = colmos) + 
+  scale_fill_manual(values = colmos) + 
+  guides(
+    colour = guide_legend(title = '', override.aes = list(size = 4, alpha = 0.6))
+    )
+  
+jpeg('figs/cumstr.jpg', family = 'serif', res = 300, units = 'in', height = 7, width = 7)
+p1 + p2 + plot_layout(ncol = 1, heights = c(1, 1))
+dev.off()
+```
+
+```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within cohort years.  The top plot shows the progression of estimated cumulative stress from July to April throughout a cohort year for each station, with points sized by percent dissolution.  The bottom plot shows the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates within a year represent the frequency and magnitude of estimated exposure time of pteropods in a cohort when conditions were under-saturatated below $\\Omega_{crit} = 1$."}
+knitr::include_graphics('figs/cumstr.jpg')
+```
 
 
