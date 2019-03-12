@@ -1,10 +1,11 @@
 ---
-title: "Figures"
-output: html_document
+output: 
+  bookdown::html_document2:
+    code_folding: hide
 ---
 
 ```{r message = F, warning = F, results = 'hide', echo = F}
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, echo = F, fig.path = 'figs/')
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/')
 
 library(tidyverse)
 library(gridExtra)
@@ -25,6 +26,7 @@ library(shiny)
 library(mapproj)
 library(viridis)
 library(colorspace)
+library(grid)
 
 prj <- 4326 # wgs84
 
@@ -48,7 +50,7 @@ locs <- chmdatsum %>%
 dat_ext <- make_bbox(locs$lon, locs$lat, f = 0.2)
 
 # get the base map using the extent
-bsmap <-  get_map(location = dat_ext, maptype = 'terrain-background', zoom = 8)
+bsmap <-  get_map(location = dat_ext, maptype = 'terrain-background', source = 'stamen', zoom = 8)
 
 # viridis colors with darker yellow
 colmst <- viridis(3)
@@ -57,10 +59,18 @@ colmst[3] <- '#FFB90F'
 colmos <- diverging_hcl(3, 'Blue-Red')
 ```
 
+# Figures {.tabset}
+
+## Map
+
+[download](figs/statmap.jpg)
 ```{r statmap, fig.cap = "Locations of stations in the Puget Sound where pteropod and environmental sampling occurred.  Samples were collected in April, July, and September from 2014 to 2016.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/statmap.jpg')
 ```
 
+## Cluster analyses
+
+[download](figs/clstmap.jpg)
 ```{r, results = 'hide'}
 toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
@@ -255,7 +265,7 @@ dev.off()
 
 ```
 
-```{r clstmap, fig.cap = "Clustering results of stations based on within-month averages for salinity, water temperature, dissolved oxygen, and aragonite saturation state.  Within-month averages are based on all environmental data collected across the sample years from 2014 to 2016 in the same month.  Results for each month (starting in July the prior year coinciding with spring spawning) are shown as dendrograms for site clustering (left), dissimilarity matrices showing mean Euclidean distances between observations at pairs of sites (middle), and spatial arrangements of the defined clusters (right).  Cluster groups were set at three based on approximate dendrogram separation between sites to explain dominant patterns among enviromental variables.", out.width = "70%", fig.align = 'center'}
+```{r clstmap, fig.cap = "Clustering results of stations based on within-month averages for salinity, water temperature, dissolved oxygen, and aragonite saturation state.  Within-month averages are based on all environmental data collected across the sample years from 2014 to 2016 in the same month.  Results for each month (starting in July the prior year coinciding with spring spawning) are shown as dendrograms for site clustering (left), dissimilarity matrices showing mean Euclidean distances between observations at pairs of sites (middle), and spatial arrangements of the defined clusters (right).  Cluster groups were set at three based on approximate dendrogram separation between sites to explain dominant patterns among environmental variables.", out.width = "70%", fig.align = 'center'}
 knitr::include_graphics('figs/clsts.jpg')
 ```
 
@@ -321,10 +331,16 @@ dev.off()
 
 ```
 
-```{r pcafig, fig.cap = "Results of prinicipal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap) with site points sized by measured type III dissolution for pteropods collected at the same time.  The right plot shows the sites with text identifies for the sit number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
+## PCA 
+
+[download](figs/pcafig.jpg)
+```{r pcafig, fig.cap = "Results of prinicipal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the sites with text identifiers for the site number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/pcastat.jpg')
 ```
 
+## Observed time series
+
+[download](figs/obsdat.jpg)
 ```{r, results = 'hide'}
 strdat <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
@@ -352,9 +368,9 @@ toplo1 <- biodat %>%
 
 p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
   geom_line(aes(group = cohortyr)) +
-  geom_point(aes(fill = mo), alpha = 0.7, size = 4, pch = 21) +
+  geom_point(aes(fill = mo), alpha = 0.7, size = 3, pch = 21) +
   facet_grid(station~.) +
-  theme_bw(base_family = 'serif', base_size = 12) +
+  theme_bw(base_family = 'serif', base_size = 10) +
   theme(
     strip.background = element_blank(), 
     axis.title.x = element_blank(), 
@@ -374,9 +390,9 @@ toplo2 <- chmdatsum %>%
 p2 <- ggplot(toplo2, aes(x = factor(date), y = min)) +
   geom_segment(data = strdat, aes(y = 1, yend = chmval, xend = factor(date), colour = 'Cumulative stress difference'), linetype = 'dotted', size = 0.9) +
   geom_line(aes(group = cohortyr)) +
-  geom_point(aes(fill = mo), alpha = 0.7, size  = 4, pch = 21) +
+  geom_point(aes(fill = mo), alpha = 0.7, size  = 3, pch = 21) +
   facet_grid(station~.) +
-  theme_bw(base_family = 'serif', base_size = 12) + 
+  theme_bw(base_family = 'serif', base_size = 10) + 
   theme(
     strip.background = element_blank(), 
     axis.title.x = element_blank(), 
@@ -396,20 +412,73 @@ p2 <- ggplot(toplo2, aes(x = factor(date), y = min)) +
 pleg <- g_legend(p2)
 p2 <- p2 + theme(legend.position = 'none')
 
-jpeg('figs/obsdat.jpg', height = 7, width = 7, units = 'in', res = 300, family = 'serif')
+jpeg('figs/obsdat.jpg', height = 6, width = 7, units = 'in', res = 300, family = 'serif')
 wrap_elements(pleg) + 
   (p1 + p2 + plot_layout(ncol = 2)) + 
   plot_layout(ncol = 1, heights = c(0.05, 1))
 dev.off()
 ```
 
-```{r obsdat, fig.cap = "Observed data", out.width = "80%", fig.align = 'center'}
+```{r obsdat, fig.cap = "Observed time series for each station (rows) showing \\% type III dissolution of pteropods (left) and observed minimum aragonite saturation state (right).  Points at each station are connected by cohort years.  The right plot shows the selected aragonite threshold ($\\Omega_{crit} = 1$) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/obsdat.jpg')
 ```
 
-Figures: 
+## Dissolution vs aragonite
 
-* type 3 dissolution vs min ara, by season/year
+```{r, results = 'hide'}
+toplo <- chmdatsum %>% 
+  filter(var %in% 'ara') %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
+  gather('dissvar', 'dissval', typ1:typ3) %>% 
+  gather('chemvar', 'chemval', ave:dlt) %>% 
+  filter(dissvar %in% 'typ3') %>% 
+  filter(chemvar %in% 'min') 
+
+p1 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
+  # geom_line(aes(group = station), colour = 'grey') +
+  stat_smooth(method = 'lm', se = T, colour = 'black') +
+  geom_point(aes(colour = factor(cohortyr), group = station), pch = 15, size = 0, alpha = 0) +
+  geom_label(aes(fill = factor(cohortyr), group = station, label = station), colour = 'black', size = 3, alpha = 0.6, show.legend = F) +
+  facet_grid(~ mo) + #, scales = 'free') +
+  theme_bw(base_family = 'serif', base_size = 12) +
+  theme(
+    strip.background = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top', 
+    axis.title = element_blank()
+  ) + 
+  scale_fill_manual(values = colmos) + 
+  scale_colour_manual(values = colmos) + 
+  guides(colour = guide_legend(override.aes = list(size = 4, alpha = 0.6)))
+
+p2 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
+  # geom_line(aes(group = station), colour = 'grey') +
+  stat_smooth(method = 'lm', se = T, colour = 'black') +
+  geom_point(aes(colour = factor(mo), group = station), pch = 15, size = 0, alpha = 0) +
+  geom_label(aes(fill = factor(mo), group = station, label = station), colour = 'black', size = 3, alpha = 0.6, show.legend = F) +
+  facet_grid(~ cohortyr) + #, scales = 'free') +
+  theme_bw(base_family = 'serif', base_size = 12) +
+  theme(
+    strip.background = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top', 
+    axis.title = element_blank()
+  ) + 
+  scale_fill_manual(values = colmos) + 
+  scale_colour_manual(values = colmos) + 
+  guides(colour = guide_legend(override.aes = list(size = 4, alpha = 0.6)))
+
+jpeg('figs/disvara.jpg', height = 6, width = 7, units = 'in', res = 300, family = 'serif')
+wrap_elements(textGrob('         % type III dissolution', rot = 90)) + (p1 + p2 + wrap_elements(textGrob(expression("Minimum observed "*Omega))) + plot_layout(ncol = 1, heights = c(1, 1, 0.1))) + plot_layout(ncol = 2, widths = c(0.1, 1))
+dev.off()
+```
+
+```{r disvara, fig.cap = "Percent type III dissolution measured in pteropods versus minimum observed aragonite saturation state for each station.  The top row shows stations grouped by month across cohort years and the bottom row shows stations gruoped by cohort years across months.  Linear regression lines with 95\\% confidence intervals are shown in each panel.", out.width = "80%", fig.align = 'center'}
+knitr::include_graphics('figs/disvara.jpg')
+```
+
+Figures: 
 
 * interaction plots of o2 and min aragonite
 
