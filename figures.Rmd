@@ -269,6 +269,9 @@ dev.off()
 knitr::include_graphics('figs/clsts.jpg')
 ```
 
+## PCA 
+
+[download](figs/pcastat.jpg)
 ```{r, results = 'hide'}
 
 # cluster
@@ -309,17 +312,17 @@ tomod <- chmsub %>%
 mod <- prcomp(tomod[ , c('ara', 'oxy', 'sal', 'temp')], scale. = T, center = T)
 
 # no labels
-p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'darkblue') + 
+p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'blue') + 
   scale_size(range = c(2, 8)) +
-  scale_colour_manual(values = colmst) + 
-  scale_fill_manual(values = colmst) + 
+  scale_colour_manual(values = rev(colmst)) + 
+  scale_fill_manual(values = rev(colmst)) + 
   guides(size = guide_legend(title = '% type III dissolution')) + 
   theme(legend.position = 'top')
 pleg <- g_legend(p1)
 p1 <- p1 + theme(legend.position = 'none')
  
 # with labels
-p2 <- ggord(mod, obslab = T, vec_ext = 4, size = 1.8, coord_fix = F, labcol = 'darkblue') 
+p2 <- ggord(mod, obslab = T, vec_ext = 4, size = 1.8, coord_fix = F, labcol = 'blue') 
 
 jpeg('figs/pcastat.jpg', family = 'serif', height = 4.5, width = 8.5, res = 300, units = 'in')
 grid.arrange(
@@ -331,10 +334,8 @@ dev.off()
 
 ```
 
-## PCA 
 
-[download](figs/pcastat.jpg)
-```{r pcafig, fig.cap = "Results of prinicipal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the sites with text identifiers for the site number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
+```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the sites with text identifiers for the site number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/pcastat.jpg')
 ```
 
@@ -475,8 +476,15 @@ wrap_elements(textGrob('           % type III dissolution', rot = 90)) + (p1 + p
 dev.off()
 ```
 
-```{r disvara, fig.cap = "Percent type III dissolution measured in pteropods versus minimum observed aragonite saturation state for each station.  The top row shows stations grouped by month across cohort years and the bottom row shows stations gruoped by cohort years across months.  Linear regression lines with 95\\% confidence intervals are shown in each panel.", out.width = "80%", fig.align = 'center'}
+```{r disvara, fig.cap = "Percent type III dissolution measured in pteropods versus minimum observed aragonite saturation state for each station.  The top row shows stations grouped by month across cohort years and the bottom row shows stations grouped by cohort years across months.  Linear regression lines with 95\\% confidence intervals are shown in each panel.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/disvara.jpg')
+```
+
+```{r eval = F}
+modyrs <- lm(dissval ~ chemval * factor(cohortyr), data = toplo)#$toplo[!toplo$cohortyr %in% '2016', ])
+summary(modyrs)
+modmos <- lm(dissval ~ chemval * factor(mo), data = toplo)#$toplo[!toplo$cohortyr %in% '2016', ])
+summary(modmos)
 ```
 
 ## oxygen and aragonite 
@@ -553,7 +561,7 @@ wrap_elements(textGrob('% type III dissolution        ', rot = 90)) + (p1 + p2 +
 dev.off()
 ```
 
-```{r oxyint, fig.cap = 'Interactions and additive effects of dissolved oxygen and aragonite saturation state on dissolution measures of pteropods. The top plot shows a linear model with a significant interaction between oxygen and the percentage of the water column undersaturated for aragonite, where the latter predictor had a significant main effect on dissolution.  The bottom plot shows a linear model with significant main effects for both oxygen and the observed range of aragonite saturation state in the water column for each site.  The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
+```{r oxyint, fig.cap = 'Interactions and additive effects of dissolved oxygen and aragonite saturation state on dissolution measures of pteropods. The top plot shows a linear model with a significant interaction between oxygen and the percentage of the water column undersaturated for aragonite, where the latter predictor had a significant main effect on dissolution.  The bottom plot shows a linear model with significant main effects for both oxygen and the observed range of aragonite saturation state in the water column for each site.  Each model is based on July observations across all sample years. The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
 knitr::include_graphics('figs/oxyint.jpg')
 ```
 
@@ -614,8 +622,16 @@ p1 + p2 + plot_layout(ncol = 1, heights = c(1, 1))
 dev.off()
 ```
 
-```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within cohort years.  The top plot shows the progression of estimated cumulative stress from July to April throughout a cohort year for each station, with points sized by percent dissolution.  The bottom plot shows the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates within a year represent the frequency and magnitude of estimated exposure time of pteropods in a cohort when conditions were under-saturatated below $\\Omega_{crit} = 1$."}
+```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within cohort years.  The top plot shows the progression of estimated cumulative stress from July to April throughout a cohort year for each station, with points sized by percent dissolution.  The bottom plot shows the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates within a year represent the frequency and magnitude of estimated exposure time of pteropods in a cohort when conditions were under-saturated below $\\Omega_{crit} = 1$."}
 knitr::include_graphics('figs/cumstr.jpg')
 ```
 
+```{r, eval = F}
+strmods <- strdat %>% 
+  group_by(cohortyr) %>% 
+  nest %>%
+  mutate(
+    mod = purrr::map(data, function(x) summary(lm(typ3 ~ strscnt, x)))
+  )
+```
 

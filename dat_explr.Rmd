@@ -250,20 +250,15 @@ column(12,
   )
 )
 
-renderPlot({
-  
-  validate(
-    need(input$chm != 'temp', 'temperature on both plot axes not possible')
-  )
-  
+tmpdat <- reactive({  
+
   # inputs
   chm <- input$chm
   dis <- input$dis
   val <- input$val
   tmp <- input$tmp
   sta <- input$sta
-  chmlab <- chmlab()
-
+  
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'temp')) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
@@ -275,8 +270,55 @@ renderPlot({
     filter(station %in% sta) %>% 
     select(-chemvar) %>% 
     spread(var, chemval)
+  
+  return(dat)
+  
+})
 
-  p <- ggplot(dat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
+lmmodtmp <- reactive({
+
+  # input
+  tmpdat <- tmpdat()
+  modtyptmp <- input$modtyptmp
+
+  datjul <- tmpdat %>%
+    filter(mo %in% c('Jul'))
+  datapr <- tmpdat %>%
+    filter(mo %in% c('Apr'))
+  datsep <- tmpdat %>%
+    filter(mo %in% c('Sep'))
+
+  frm <- paste('dissval ~', input$chm, '+temp')
+  if(modtyptmp)
+    frm <- gsub('\\+', '*', frm)
+
+  modjul <- paste('lm(', frm, ', data = datjul)')
+  modjul <- eval(parse(text = modjul))
+
+  modsep <- paste('lm(', frm, ', data = datsep)')
+  modsep <- eval(parse(text = modsep))
+
+  modapr <- paste('lm(', frm, ', data = datapr)')
+  modapr <- eval(parse(text = modapr))
+
+  return(list(July = modjul, September = modsep, April = modapr))
+
+})
+
+renderPlot({
+  
+  validate(
+    need(input$chm != 'temp', 'temperature on both plot axes not possible')
+  )
+  
+  # inputs
+  chm <- input$chm
+  dis <- input$dis
+  tmp <- input$tmp
+  tmpdat <- tmpdat()
+  chmlab <- chmlab()
+
+  p <- ggplot(tmpdat, aes_string(x = 'temp', y = chm, size = 'dissval')) +
     geom_point(aes(fill = mo, group = station), pch = 21) +
     stat_smooth(method = 'lm', se = F, colour = 'red') +
     facet_grid(~ cohortyr) +
@@ -297,10 +339,205 @@ renderPlot({
   return(p)
   
 }, height = 315, width = 850)
-
 ```
 
-The third set of plots show the selected environmental measure against oxygen with points sized by the pteropod response measure. The x-axis is alway oxygen and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by month. 
+#### {.tabset .tabset-pills}
+
+```{r}
+column(12, 
+column(width = 4, 
+       selectInput('modtyptmp', "Include interaction:", choices = c(T, F))
+       )
+)
+```
+
+##### July model
+
+```{r}
+renderPrint({
+  
+  validate(
+    need(input$chm != 'temp', 'model not possible with selection')
+  )
+  
+  # input
+  lmmodtmp <- lmmodtmp()$July
+  
+  vifval <- lmmodtmp$model[,-1] %>% 
+    lm(temp ~ ., data= .) %>% 
+    summary %>% 
+    .$r.squared
+  vifval <- 1 / (1 - vifval)
+  vifval <- round(vifval, 2)  
+
+  print(paste('VIF:', vifval))
+  summary(lmmodtmp)
+  
+})
+
+# july mod
+renderPlot({
+  
+  req(input$chm != 'tmp')
+  
+  # input
+  lmmodtmp <- lmmodtmp()
+  chmlab <- chmlab()
+  tmp <- input$tmp
+  
+  lmmodtmpplo <- lmmodtmp$July
+  
+  # colors
+  cols <- RColorBrewer::brewer.pal(9, 'RdBu')
+  
+  # get data to plot
+  pldat <- get_pldat(lmmodtmpplo, 'temp')
+  pl1 <- pldat[[1]]
+  pl2 <- pldat[[2]]
+  
+  # names for aes_string
+  nms <- names(pl1)
+  p1 <- ggplot() +
+    geom_ribbon(data = pl1, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+    geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+    geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
+    theme_bw() +
+    scale_x_continuous(chmlab) +
+    scale_colour_gradientn(paste(tmp, 'temp'), colours = cols) + 
+    scale_y_continuous(nms[1]) +
+    ggtitle('July model')
+  
+  return(p1)
+  
+}, height = 300, width = 600)
+```
+
+##### September model
+
+```{r}
+renderPrint({
+  
+  validate(
+    need(input$chm != 'temp', 'model not possible with selection')
+  )
+  
+  # input
+  lmmodtmp <- lmmodtmp()$September
+  
+  vifval <- lmmodtmp$model[,-1] %>% 
+    lm(temp ~ ., data= .) %>% 
+    summary %>% 
+    .$r.squared
+  vifval <- 1 / (1 - vifval) 
+  vifval <- round(vifval, 2)  
+  
+  print(paste('VIF:', vifval))
+  summary(lmmodtmp)
+  
+})
+
+# sept mod
+renderPlot({
+  
+  req(input$chm != 'temp')
+  
+  # input
+  lmmodtmp <- lmmodtmp()
+  chmlab <- chmlab()
+  tmp <- input$tmp
+  
+  lmmodtmpplo <- lmmodtmp$September
+  
+  # colors
+  cols <- RColorBrewer::brewer.pal(9, 'RdBu')
+  
+  # get data to plot
+  pldat <- get_pldat(lmmodtmpplo, 'temp')
+  pl1 <- pldat[[1]]
+  pl2 <- pldat[[2]]
+  
+  # names for aes_string
+  nms <- names(pl1)
+  p1 <- ggplot() +
+    geom_ribbon(data = pl1, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+    geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+    geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
+    theme_bw() +
+    scale_x_continuous(chmlab) +
+    scale_colour_gradientn(paste(tmp, 'temp'), colours = cols) + 
+    scale_y_continuous(nms[1]) +
+    ggtitle('September model')
+  
+  return(p1)
+  
+}, height = 300, width = 600)
+```
+
+##### April model
+
+```{r}
+renderPrint({
+  
+  validate(
+    need(input$chm != 'temp', 'model not possible with selection')
+  )
+  
+  # input
+  lmmodtmp <- lmmodtmp()$April
+  
+  vifval <- lmmodtmp$model[,-1] %>% 
+    lm(temp ~ ., data= .) %>% 
+    summary %>% 
+    .$r.squared
+  vifval <- 1 / (1 - vifval)
+  vifval <- round(vifval, 2)  
+  
+  print(paste('VIF:', vifval))
+  summary(lmmodtmp)
+  
+})
+
+# april mod
+renderPlot({
+  
+  req(input$chm != 'temp')
+  
+  # input
+  lmmodtmp <- lmmodtmp()
+  chmlab <- chmlab()
+  tmp <- input$tmp
+
+  lmmodtmpplo <- lmmodtmp$April
+
+  # colors
+  cols <- RColorBrewer::brewer.pal(9, 'RdBu')
+  
+  # get data to plot
+  pldat <- get_pldat(lmmodtmpplo, 'temp')
+  pl1 <- pldat[[1]]
+  pl2 <- pldat[[2]]
+  
+  # names for aes_string
+  nms <- names(pl1)
+  p1 <- ggplot() +
+    geom_ribbon(data = pl1, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
+    geom_line(data = pl1, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
+    geom_text(data = pl2, aes(x= x, y = y, label = lab), hjust = 0) +
+    theme_bw() +
+    scale_x_continuous(chmlab) +
+    scale_colour_gradientn(paste(tmp, 'temp'), colours = cols) + 
+    scale_y_continuous(nms[1]) +
+    ggtitle('April model')
+  
+  return(p1)
+  
+}, height = 300, width = 600)
+```
+
+#### {.tabset} 
+
+The third set of plots show the selected environmental measure against oxygen with points sized by the pteropod response measure. The x-axis is alway oxygen and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by month.
+
 ```{r}
 column(12, 
   column(4, 
@@ -334,11 +571,11 @@ oxydat <- reactive({
   
 })
 
-lmmod <- reactive({
+lmmodoxy <- reactive({
   
   # input
   oxydat <- oxydat()
-  modtyp <- input$modtyp
+  modtypoxy <- input$modtypoxy
   
   datjul <- oxydat %>% 
     filter(mo %in% c('Jul'))
@@ -348,7 +585,7 @@ lmmod <- reactive({
     filter(mo %in% c('Sep'))
 
   frm <- paste('dissval ~', input$chm, '+oxy')
-  if(modtyp)
+  if(modtypoxy)
     frm <- gsub('\\+', '*', frm)
 
   modjul <- paste('lm(', frm, ', data = datjul)')
@@ -406,11 +643,10 @@ renderPlot({
 ```{r}
 column(12, 
 column(width = 4, 
-       selectInput('modtyp', "Include interaction:", choices = c(T, F))
+       selectInput('modtypoxy', "Include interaction:", choices = c(T, F))
        )
 )
 ```
-
 
 ##### July model
 
@@ -422,9 +658,9 @@ renderPrint({
   )
   
   # input
-  lmmod <- lmmod()$July
+  lmmodoxy <- lmmodoxy()$July
   
-  vifval <- lmmod$model[,-1] %>% 
+  vifval <- lmmodoxy$model[,-1] %>% 
     lm(oxy ~ ., data= .) %>% 
     summary %>% 
     .$r.squared
@@ -432,7 +668,7 @@ renderPrint({
   vifval <- round(vifval, 2)  
 
   print(paste('VIF:', vifval))
-  summary(lmmod)
+  summary(lmmodoxy)
   
 })
 
@@ -442,17 +678,17 @@ renderPlot({
   req(input$chm != 'oxy')
   
   # input
-  lmmod <- lmmod()
+  lmmodoxy <- lmmodoxy()
   chmlab <- chmlab()
   oxy <- input$oxy
   
-  lmmodplo <- lmmod$July
+  lmmodoxyplo <- lmmodoxy$July
   
   # colors
   cols <- RColorBrewer::brewer.pal(9, 'RdBu')
   
   # get data to plot
-  pldat <- get_pldat(lmmodplo, 'oxy')
+  pldat <- get_pldat(lmmodoxyplo, 'oxy')
   pl1 <- pldat[[1]]
   pl2 <- pldat[[2]]
   
@@ -483,9 +719,9 @@ renderPrint({
   )
   
   # input
-  lmmod <- lmmod()$September
+  lmmodoxy <- lmmodoxy()$September
   
-  vifval <- lmmod$model[,-1] %>% 
+  vifval <- lmmodoxy$model[,-1] %>% 
     lm(oxy ~ ., data= .) %>% 
     summary %>% 
     .$r.squared
@@ -493,7 +729,7 @@ renderPrint({
   vifval <- round(vifval, 2)  
   
   print(paste('VIF:', vifval))
-  summary(lmmod)
+  summary(lmmodoxy)
   
 })
 
@@ -503,17 +739,17 @@ renderPlot({
   req(input$chm != 'oxy')
   
   # input
-  lmmod <- lmmod()
+  lmmodoxy <- lmmodoxy()
   chmlab <- chmlab()
   oxy <- input$oxy
   
-  lmmodplo <- lmmod$September
+  lmmodoxyplo <- lmmodoxy$September
   
   # colors
   cols <- RColorBrewer::brewer.pal(9, 'RdBu')
   
   # get data to plot
-  pldat <- get_pldat(lmmodplo, 'oxy')
+  pldat <- get_pldat(lmmodoxyplo, 'oxy')
   pl1 <- pldat[[1]]
   pl2 <- pldat[[2]]
   
@@ -544,9 +780,9 @@ renderPrint({
   )
   
   # input
-  lmmod <- lmmod()$April
+  lmmodoxy <- lmmodoxy()$April
   
-  vifval <- lmmod$model[,-1] %>% 
+  vifval <- lmmodoxy$model[,-1] %>% 
     lm(oxy ~ ., data= .) %>% 
     summary %>% 
     .$r.squared
@@ -554,7 +790,7 @@ renderPrint({
   vifval <- round(vifval, 2)  
   
   print(paste('VIF:', vifval))
-  summary(lmmod)
+  summary(lmmodoxy)
   
 })
 
@@ -564,17 +800,17 @@ renderPlot({
   req(input$chm != 'oxy')
   
   # input
-  lmmod <- lmmod()
+  lmmodoxy <- lmmodoxy()
   chmlab <- chmlab()
   oxy <- input$oxy
 
-  lmmodplo <- lmmod$April
+  lmmodoxyplo <- lmmodoxy$April
 
   # colors
   cols <- RColorBrewer::brewer.pal(9, 'RdBu')
   
   # get data to plot
-  pldat <- get_pldat(lmmodplo, 'oxy')
+  pldat <- get_pldat(lmmodoxyplo, 'oxy')
   pl1 <- pldat[[1]]
   pl2 <- pldat[[2]]
   
@@ -628,7 +864,7 @@ renderPlot({
 renderPrint({lapply(dismod()[c('Jul', 'Sep', 'Apr')], summary)})
 ```
 
-The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. The x-axis is alway temperature and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by cohort year. 
+The second set of plots show the selected environmental measure against temperature with points sized by the pteropod response measure. The x-axis is alway temperature and can be selected to show minimum, average, and maximum. Plots are facetted by month with points in each facet colored by cohort year. 
 ```{r}
 column(12, 
   column(4, 
@@ -686,7 +922,7 @@ renderPlot({
 
 ```
 
-The third set of plots show the selected environmental measure against oxygen with points sized by the pteropod response measure. The x-axis is alway oxygen and can be selected to show minimum, average, and maximum. Plots are facetted by cohort-year with points in each facet colored by cohort year. 
+The third set of plots show the selected environmental measure against oxygen with points sized by the pteropod response measure. The x-axis is alway oxygen and can be selected to show minimum, average, and maximum. Plots are facetted by month with points in each facet colored by cohort year. 
 ```{r}
 column(12, 
   column(4, 
