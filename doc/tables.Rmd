@@ -1,0 +1,163 @@
+---
+title: "Tables"
+output: 
+  bookdown::word_document2:
+    reference_docx: my_styles.docx
+urlcolor: blue
+link-citations: true
+---
+
+```{r message = F, warning = F, results = 'hide', echo = F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/')
+
+library(tidyverse)
+library(jtools)
+library(huxtable)
+library(flextable)
+library(officer)
+
+# source('R/funcs.R')
+
+load(file = '../data/chmdatraw.RData')
+load(file = '../data/chmdatsum.RData')
+load(file = '../data/biodat.RData')
+
+groups <- tibble(
+  station = c(22, 8, 28, 38, 4, 12, 402),
+  group = c('mild exposure', rep('moderate exposure', 3), rep('severe exposure', 3))
+  )
+```
+
+```{r statvals, echo = F}
+totab <- chmdatraw %>% 
+  group_by(station, var) %>% 
+  summarise(
+    depth = round(max(depth, na.rm = T), 0),
+    ave = round(mean(val, na.rm = T), 1),
+    min = round(min(val, na.rm = T), 1),
+    min = paste0('(', min, ','),
+    max = round(max(val, na.rm = T), 1),
+    max = paste0(max, ')'), 
+    lon = round(mean(lon, na.rm = T), 1), 
+    lon = paste0(lon, '/'),
+    lat = round(mean(lat, na.rm = T), 1)
+  ) %>% 
+  filter(var %in% c('ara', 'sal')) %>% 
+  unite('est', ave, min, max, sep = ' ') %>% 
+  unite('loc', lon, lat, sep = '') %>% 
+  spread(var, est) %>% 
+  ungroup %>% 
+  left_join(groups, by = 'station') %>% 
+  dplyr::select(group, station, loc, depth, ara, sal) %>% 
+  mutate(
+    station = factor(station, levels = c(22, 8, 28, 38, 4, 12, 402))
+  ) %>% 
+  arrange(station) %>% 
+  mutate(
+    group = ifelse(duplicated(group), '', group)
+  ) %>% 
+  rename(
+    Station = station, 
+    `lon/lat` = loc, 
+    `Depth (m)` = depth, 
+    `Aragonite saturation ($\\Omega$)` = ara,
+    `Salinity (psu)` = sal
+  )
+  
+ names(totab)[1] <- ''
+ 
+# table stuff
+cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  Stations are grouped by exposure categories defined by multivariate clustering (Figure 2). Depth is tee maximum sampled depth for seasonal CTD casts.  Average (min/max) aragonite saturation state and salinity values are also shown based on approximately nine visits to each site from 2014 to 2016.'
+
+# table
+knitr::kable(totab, caption = cap.val)
+```
+
+*Table \@ref(tab:araminmod): \(\#tab:araminmod) Linear multiple regression models testing the additive effects of minimum observed aragonite saturation state, cohort year (factor), and months (factor) on extent of type III dissolution in pteropods.  Results for four models are shown where the first two columns are for relationships grouped by cohort year (Figure 5, top row) and the second two columns are for relationships grouped by month (Figure 5, bottom row).  Separate models were also run with and without 2016 data because of missing April observations in 2016.  Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
+```{r, results = 'asis', echo = F}
+
+tomod <- chmdatsum %>% 
+  filter(var %in% 'ara') %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
+  gather('dissvar', 'dissval', typ1:typ3) %>% 
+  gather('chemvar', 'chemval', ave:dlt) %>% 
+  filter(dissvar %in% 'typ3') %>% 
+  filter(chemvar %in% 'min') %>% 
+  mutate(mo = factor(mo, ordered = F))
+
+modyrs <- lm(dissval ~ chemval + factor(cohortyr), data = tomod)#$toplo[!toplo$cohortyr %in% '2016', ])
+modyrsno2016 <- lm(dissval ~ chemval + factor(cohortyr), data = tomod[!tomod$cohortyr %in% '2016', ])
+modmos <- lm(dissval ~ chemval + factor(mo), data = tomod)#$toplo[!toplo$cohortyr %in% '2016', ])
+modmosno2016 <- lm(dissval ~ chemval + factor(mo), data = tomod[!tomod$cohortyr %in% '2016', ])
+# summary(modmos)
+
+
+# use jtools
+coef_names <- c("Constant" = "(Intercept)", "Ara, min" = "chemval", "2015" = "factor(cohortyr)2015", "2016" = "factor(cohortyr)2016", "Sep" = "factor(mo)Sep", "Apr" = "factor(mo)Apr")
+huxres <- export_summs(modyrs, modyrsno2016, modmos, modmosno2016, model.names = c('By year', 'By year (no 2016)', 'By month', 'By month (no 2016)'), coefs = coef_names)
+
+brd <- fp_border(color="black")
+
+# use flextable
+tab <- huxres %>%
+  as_FlexTable %>%
+  font(fontname = 'Times', part = 'all') %>%
+  fontsize(size = 12, part = 'all') %>%
+  border_remove %>%
+  autofit(add_h = 0) %>%
+  hline_top(part = 'all', border = brd) %>%
+  hline(i = 1, part = 'body', border = brd) %>%
+  hline(i= 13, part = 'body', border = brd) %>%
+  hline(i= 15, part = 'body', border = brd)
+tab
+```
+
+*Table \@ref(tab:cumstrmod): \(\#tab:cumstrmod) Linear multiple regression models testing the additive effects of minimum observed cumulative stress exposure (S, eqn. 2) and cohort year (factor) on extent of type III dissolution in pteropods.  Results for two models are shown where the first includes 2016 data and the second does not because of missing April observations (Figure 7, bottom). Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
+```{r, results = 'asis', echo = F}
+tomod <- chmdatsum %>% 
+  filter(var %in% 'ara') %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
+  gather('ara', 'chmval', ave:dlt) %>% 
+  filter(ara %in% 'min') %>% 
+  mutate(
+    thrsh = 1,
+    aracat = ifelse(chmval < thrsh, 1, 0),
+    aradff = thrsh - chmval
+    ) %>% 
+  unite('costa', cohortyr, station, remove = F) %>% 
+  group_by(costa) %>% 
+  mutate(
+    strsdis = cumsum(aracat),
+    strscnt = cumsum(aradff)
+  )
+
+modyrs <- lm(typ3 ~ strscnt + factor(cohortyr), data = tomod)
+modyrsno2016 <- lm(typ3 ~ strscnt + factor(cohortyr), data = tomod[!tomod$cohortyr %in% '2016', ])
+
+
+# summary(modmos)
+
+
+# use jtools
+coef_names <- c("Constant" = "(Intercept)", "S" = "strscnt", "2015" = "factor(cohortyr)2015", "2016" = "factor(cohortyr)2016")
+huxres <- export_summs(modyrs, modyrsno2016, model.names = c('By year', 'By year (no 2016)'), coefs = coef_names)
+
+brd <- fp_border(color="black")
+
+# use flextable
+tab <- huxres %>%
+  as_FlexTable %>%
+  font(fontname = 'Times', part = 'all') %>%
+  fontsize(size = 12, part = 'all') %>%
+  border_remove %>%
+  autofit(add_h = 0) %>%
+  hline_top(part = 'all', border = brd) %>%
+  hline(i = 1, part = 'body', border = brd) %>%
+  hline(i= 9, part = 'body', border = brd) %>%
+  hline(i= 11, part = 'body', border = brd)
+tab
+```
+
+
