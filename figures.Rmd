@@ -562,7 +562,7 @@ wrap_elements(textGrob('% type III dissolution', rot = 90)) + p2 + pleg + plot_l
 dev.off()
 ```
 
-```{r oxyint, fig.cap = 'Interactions and additive effects of dissolved oxygen and aragonite saturation state on dissolution measures of pteropods. The top plot shows a linear model with a significant interaction between oxygen and the percentage of the water column undersaturated for aragonite, where the latter predictor had a significant main effect on dissolution.  The bottom plot shows a linear model with significant main effects for both oxygen and the observed range of aragonite saturation state in the water column for each site.  Each model is based on July observations across all sample years. The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
+```{r oxyint, fig.cap = 'Additive effects of dissolved oxygen and aragonite saturation state on dissolution measures of pteropods. The plot shows a linear model with significant main effects for both oxygen and the observed range of aragonite saturation state in the water column for each site.  The model is based on July observations across all sample years. The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
 knitr::include_graphics('figs/oxyint.jpg')
 ```
 
