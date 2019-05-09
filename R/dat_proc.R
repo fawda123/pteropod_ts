@@ -2,18 +2,17 @@ library(tidyverse)
 library(lubridate)
 library(readxl)
 library(mgcv)
+library(readxl)
 
 ##
 # bio data
 biodat <- read_excel('raw/WOAC_allData _DS_forNina_nb.xlsx', sheet = 'PteropodData') %>% 
-  select(-`Sample size for size measurement`, -`sample size for SEM imaging`, -`# of type I`, -`# of type II`, -`# of type III`, -`# of type II&III scores`) %>% 
+  select(-`Average size`, -`Standard deviation size`, -`Sample size for size measurement`, -`sample size for SEM imaging`, -`# of type I`, -`# of type II`, -`# of type III`, -`# of type II&III scores`) %>% 
   rename(
     yr = Year, 
     mo = Month, 
     station = Station, 
     abu = `Abundance (# individuals/m3)`,
-    avesz = `Average size`,
-    stdsz = `Standard deviation size`, 
     typ1 = `% type I`, 
     typ2 = `% type II`,
     typ3 = `% type III`
@@ -71,6 +70,49 @@ abuadd <- biodat %>%
 biodat <- biodat %>% 
   select(-abu) %>% 
   left_join(abuadd, by = c('date', 'yr', 'cohortyr', 'mo', 'station'))
+
+# length data, to replace old lenght data in biodat
+lendat <- read_excel('raw/length data Puget SOund.xlsx') %>% 
+  select(-Whorls, -PT, -`Individual #`) %>% 
+  rename(
+    station = `P#`, 
+    yr = Year, 
+    mo = Month, 
+    len = `Length (um)`
+  ) %>% 
+  mutate(
+    station = case_when(
+      station %in% '381' ~ '38',
+      station %in% '38wrongname' ~ '38',
+      station %in% '4O2' ~ '402',
+      station %in% '28extra' ~ '28',
+      station %in% '28resample' ~ '28',
+      station %in% '28RS' ~ '28',
+      T ~ station
+    ), 
+    mo = case_when(
+      mo %in% 'May' ~ 'April',
+      mo %in% c('November', 'October') ~ 'September',
+      T ~ mo
+    )
+  ) %>% 
+  filter(!station %in% 'RS') %>% 
+  group_by(station, mo, yr) %>% 
+  summarise(len = mean(len, na.rm = T)) %>% 
+  ungroup %>% 
+  mutate(
+    mo = factor(mo, levels = c('July', 'September', 'April'), labels = c('Jul', 'Sep', 'Apr'), ordered = T),
+    cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr),
+    dy = 15,
+    station = as.numeric(station)
+  ) %>% 
+  unite('date', yr, mo, dy, remove = F, sep = '-') %>% 
+  mutate(date = ymd(date)) %>% 
+  dplyr::select(date, yr, cohortyr, mo, station, len)
+
+# join lendat to biodat
+biodat <- biodat %>% 
+  left_join(lendat, by = c('date', 'yr', 'cohortyr', 'mo', 'station'))
 
 # join addl abundance data wiht new biodat
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
