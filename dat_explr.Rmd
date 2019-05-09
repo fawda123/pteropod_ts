@@ -48,7 +48,7 @@ strdat <- reactive({
   out <- chmdatsum %>% 
     filter(var %in% 'ara') %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
+    select(-lon, -lat, -var, -abu, -len, -yr) %>% 
     gather('ara', 'chmval', ave:dlt) %>% 
     filter(ara %in% val) %>% 
     filter(station %in% sta) %>% 
@@ -123,7 +123,7 @@ disdat <- reactive({
   dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
+    select(-lon, -lat, -var, -abu, -len) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
@@ -262,7 +262,7 @@ tmpdat <- reactive({
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'temp')) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    select(-lon, -lat, -abu, -len) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
@@ -558,7 +558,7 @@ oxydat <- reactive({
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'oxy')) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    select(-lon, -lat, -abu, -len) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
@@ -889,7 +889,7 @@ renderPlot({
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'temp')) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    select(-lon, -lat, -abu, -len) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
@@ -943,7 +943,7 @@ oxydat2 <- reactive({
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, 'oxy')) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+    select(-lon, -lat, -abu, -len) %>% 
     gather('dissvar', 'dissval', typ1:typ3) %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(dissvar %in% dis) %>% 
@@ -1252,7 +1252,7 @@ renderPlot({
   
 ```
 
-### Growth {.tabset .tabset-pills}
+### Growth by environment {.tabset .tabset-pills}
 
 ```{r}
 grodat <- reactive({
@@ -1261,14 +1261,16 @@ grodat <- reactive({
   chm <- input$chm
   val <- input$val
   sta <- input$sta
+  dis <- input$dis
 
   dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -var, -abu, -typ1, -typ2, -typ3, -stdsz, -`% type II&III`) %>%
+    select(date, yr, cohortyr, mo, station, len, !!dis, ave:dlt) %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(chemvar %in% val) %>% 
-    filter(station %in% sta)
+    filter(station %in% sta) %>% 
+    rename(disval = !!dis)
   
   return(dat)
   
@@ -1278,41 +1280,54 @@ gromod <- reactive({
   
   # input
   grodat <- grodat()
-  
+
   # complete model
-  all <- lm(avesz ~ chemval, data = grodat)
+  allchm <- lm(len ~ chemval, data = grodat)
+  alldis <- lm(len ~ disval, data = grodat)
   
   # by cohort years
   bycohortyr <- grodat %>% 
     group_by(cohortyr) %>% 
     nest %>% 
     mutate(
-      mod = purrr::map(data, function(x){ try({lm(avesz ~ chemval, data = x)})})
+      modchm = purrr::map(data, function(x){ try({lm(len ~ chemval, data = x)})}),
+      moddis = purrr::map(data, function(x){ try({lm(len ~ disval, data = x)})})
     )
-  bycohortyrout <- pull(bycohortyr, mod)
-  names(bycohortyrout) <- pull(bycohortyr, cohortyr)
+  bycohortyroutchm <- pull(bycohortyr, modchm)
+  names(bycohortyroutchm) <- pull(bycohortyr, cohortyr) %>% paste0(., 'chm')
+  bycohortyroutdis <- pull(bycohortyr, moddis)
+  names(bycohortyroutdis) <- pull(bycohortyr, cohortyr) %>% paste0(., 'dis')
+  
   
   # by seasons
   byseas <- grodat %>% 
     group_by(mo) %>% 
     nest %>% 
     mutate(
-      mod = purrr::map(data, function(x){ try({lm(avesz ~ chemval, data = x)})})
+      modchm = purrr::map(data, function(x){ try({lm(len ~ chemval, data = x)})}),
+      moddis = purrr::map(data, function(x){ try({lm(len ~ disval, data = x)})})
     )
-  byseasout <- pull(byseas, mod)
-  names(byseasout) <- pull(byseas, mo)
+  byseasoutchm <- pull(byseas, modchm)
+  names(byseasoutchm) <- pull(byseas, mo) %>% paste0(., 'chm')
+  byseasoutdis <- pull(byseas, moddis)
+  names(byseasoutdis) <- pull(byseas, mo) %>% paste0(., 'dis')
 
   # combine all    
   out <- c(
-    all = list(all), 
-    bycohortyrout,
-    byseasout
+    allchm = list(allchm), 
+    alldis = list(alldis),
+    bycohortyroutchm,
+    bycohortyroutdis,
+    byseasoutchm,
+    byseasoutdis
   )
   
   return(out)
   
 })
 ```
+
+#### All
 
 ```{r}
 renderPlot({
@@ -1321,7 +1336,7 @@ renderPlot({
   grodat <- grodat()
   chmlab <- chmlab()
 
-  p <- ggplot(grodat, aes(x = chemval, y = avesz)) +
+  p <- ggplot(grodat, aes(x = chemval, y = len)) +
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se =T, colour = 'red') +
     geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
@@ -1338,15 +1353,19 @@ renderPlot({
   
 }, height = 400, width = 400)
 
-renderPrint({lapply(gromod()['all'], summary)})
+renderPrint({lapply(gromod()['allchm'], summary)})
+```
 
+#### Grouped by year
+
+```{r}
 renderPlot({
   
   # inputs
   grodat <- grodat()
   chmlab <- chmlab()
 
-  p <- ggplot(grodat, aes(x = chemval, y = avesz)) +
+  p <- ggplot(grodat, aes(x = chemval, y = len)) +
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se = F, colour = 'red') +
     geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
@@ -1364,15 +1383,19 @@ renderPlot({
   
 }, height = 300, width = 850)
 
-renderPrint({lapply(gromod()[c('2014', '2015', '2016')], summary)})
+renderPrint({lapply(gromod()[c('2014chm', '2015chm', '2016chm')], summary)})
+```
 
+#### Grouped by month
+
+```{r}
 renderPlot({
   
   # inputs
   grodat <- grodat()
   chmlab <- chmlab()
 
-  p <- ggplot(grodat, aes(x = chemval, y = avesz)) +
+  p <- ggplot(grodat, aes(x = chemval, y = len)) +
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se = F, colour = 'red') +
     geom_label(aes(fill = cohortyr, group = station, label = station), size = 3, colour = 'grey') +
@@ -1390,10 +1413,102 @@ renderPlot({
   
 }, height = 300, width = 850)
 
-renderPrint({lapply(gromod()[c('Jul', 'Sep', 'Apr')], summary)})
+renderPrint({lapply(gromod()[c('Julchm', 'Sepchm', 'Aprchm')], summary)})
 ```
 
-### Abundance {.tabset .tabset-pills}
+### Growth by dissolution {.tabset .tabset-pills}
+
+#### All
+
+```{r}
+renderPlot({
+  
+  # inputs
+  grodat <- grodat()
+  dis <- input$dis
+
+  p <- ggplot(grodat, aes(x = disval, y = len)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se =T, colour = 'red') +
+    geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
+    ylab("Average size") +
+    xlab(dis) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 400, width = 400)
+
+renderPrint({lapply(gromod()['alldis'], summary)})
+```
+
+#### Grouped by year
+
+```{r}
+renderPlot({
+  
+  # inputs
+  grodat <- grodat()
+  dis <- input$dis
+
+  p <- ggplot(grodat, aes(x = disval, y = len)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
+    facet_grid(~ cohortyr) + #, scales = 'free') +
+    ylab("Average size") +
+    xlab(dis) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+renderPrint({lapply(gromod()[c('2014dis', '2015dis', '2016dis')], summary)})
+```
+
+#### Grouped by month
+
+```{r}
+renderPlot({
+  
+  # inputs
+  grodat <- grodat()
+  dis <- input$dis
+
+  p <- ggplot(grodat, aes(x = disval, y = len)) +
+    # geom_line(aes(group = station), colour = 'grey') +
+    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    geom_label(aes(fill = cohortyr, group = station, label = station), size = 3, colour = 'grey') +
+    facet_grid(~ mo) + #, scales = 'free') +
+    ylab("Average size") +
+    xlab(dis) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      strip.background = element_blank(), 
+      legend.title = element_blank(), 
+      legend.position = 'top'
+    )
+
+  return(p)
+  
+}, height = 300, width = 850)
+
+renderPrint({lapply(gromod()[c('Juldis', 'Sepdis', 'Aprdis')], summary)})
+```
+
+
+### Abundance by environment {.tabset .tabset-pills}
 
 ```{r}
 abudat <- reactive({
@@ -1406,7 +1521,7 @@ abudat <- reactive({
   dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(-lon, -lat, -var, -typ1, -typ2, -typ3, -avesz, -stdsz, -`% type II&III`) %>%
+    select(-lon, -lat, -var, -typ1, -typ2, -typ3, -len, -`% type II&III`) %>%
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(chemvar %in% val) %>% 
     filter(station %in% sta)
@@ -1536,3 +1651,4 @@ renderPlot({
 
 renderPrint({lapply(abumod()[c('Jul', 'Sep', 'Apr')], summary)})
 ```
+
