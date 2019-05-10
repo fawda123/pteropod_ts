@@ -79,7 +79,7 @@ knitr::kable(totab, caption = cap.val)
 tomod <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
   full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
+  select(-lon, -lat, -var, -abu, -len) %>% 
   gather('dissvar', 'dissval', typ1:typ3) %>% 
   gather('chemvar', 'chemval', ave:dlt) %>% 
   filter(dissvar %in% 'typ3') %>% 
@@ -118,7 +118,7 @@ tab
 tomod <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
   full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
+  select(-lon, -lat, -var, -abu, -len, -yr) %>% 
   gather('ara', 'chmval', ave:dlt) %>% 
   filter(ara %in% 'min') %>% 
   mutate(
