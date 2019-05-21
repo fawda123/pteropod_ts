@@ -346,7 +346,7 @@ knitr::include_graphics('figs/pcastat.jpg')
 strdat <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
   full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -var, -abu, -avesz, -stdsz, -yr) %>% 
+  select(-lon, -lat, -var, -abu, -len, -yr) %>% 
   gather('ara', 'chmval', ave:dlt) %>% 
   filter(ara %in% 'min') %>% 
   mutate(
@@ -431,7 +431,7 @@ knitr::include_graphics('figs/obsdat.jpg')
 toplo <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
   full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -var, -abu, -avesz, -stdsz) %>% 
+  select(-lon, -lat, -var, -abu, -len) %>% 
   gather('dissvar', 'dissval', typ1:typ3) %>% 
   gather('chemvar', 'chemval', ave:dlt) %>% 
   filter(dissvar %in% 'typ3') %>% 
@@ -480,11 +480,48 @@ dev.off()
 knitr::include_graphics('figs/disvara.jpg')
 ```
 
+Linear model by years.
 ```{r eval = T}
 modyrs <- lm(dissval ~ chemval * factor(cohortyr), data = toplo)#$toplo[!toplo$cohortyr %in% '2016', ])
 summary(modyrs)
+```
+
+Linear model by months.
+```{r}
 modmos <- lm(dissval ~ chemval * factor(mo), data = toplo)#$toplo[!toplo$cohortyr %in% '2016', ])
 summary(modmos)
+```
+
+Combined model, average aragonite (above is minimum).
+```{r eval = T}
+#data
+tomod <- chmdatsum %>% 
+  filter(var %in% 'ara') %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -var, -abu, -len) %>% 
+  gather('dissvar', 'dissval', typ1:typ3) %>% 
+  gather('chemvar', 'chemval', ave:dlt) %>% 
+  filter(dissvar %in% 'typ3') %>% 
+  filter(chemvar %in% 'ave') 
+# model
+modall <- lm(dissval ~ chemval, data = tomod)
+
+# plot
+plot(dissval ~ chemval, data = tomod)
+abline(reg = modall)
+
+# predicted
+ave <- mean(tomod$chemval, na.rm = T)
+toprd <- data.frame(
+    chemval = c(ave + 2 * 0.5, ave, ave - 2 * 0.5), 
+    lab = c('pre', 'current', 'post')
+  ) %>% 
+  mutate(
+    type3 = predict(modall, newdata = ., se.fit = T)$fit,
+    sefit = predict(modall, newdata = ., se.fit = T)$se.fit
+  ) %>% 
+  rename(ara = chemval)
+toprd
 ```
 
 ## oxygen and aragonite 
@@ -495,7 +532,7 @@ summary(modmos)
 oxydat <- chmdatsum %>% 
   filter(var %in% c('ara', 'oxy', 'araund')) %>% 
   full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -abu, -avesz, -stdsz) %>% 
+  select(-lon, -lat, -abu, -len) %>% 
   gather('dissvar', 'dissval', typ1:typ3) %>% 
   gather('chemvar', 'chemval', ave:dlt) %>% 
   filter(dissvar %in% 'typ3')
