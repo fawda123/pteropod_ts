@@ -513,8 +513,8 @@ abline(reg = modall)
 # predicted
 ave <- mean(tomod$chemval, na.rm = T)
 toprd <- data.frame(
-    chemval = c(ave + 2 * 0.5, ave, ave - 2 * 0.5), 
-    lab = c('pre', 'current', 'post')
+    chemval = c(ave + 0.5, ave), 
+    lab = c('pre (1750)', 'current')
   ) %>% 
   mutate(
     type3 = predict(modall, newdata = ., se.fit = T)$fit,
