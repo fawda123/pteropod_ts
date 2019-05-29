@@ -114,6 +114,18 @@ lendat <- read_excel('raw/length data Puget SOund.xlsx') %>%
 biodat <- biodat %>% 
   left_join(lendat, by = c('date', 'yr', 'cohortyr', 'mo', 'station'))
 
+# identify winter, summer cohorts by length in each season
+biodat <- biodat %>% 
+  mutate(
+    cohortseas = case_when(
+      mo %in% 'Jul' & len >= 700 ~ 'summer',
+      mo %in% 'Sep' & len >= 1000 ~ 'summer', 
+      mo %in% 'Sep' & len < 500 ~ 'winter',
+      mo %in% 'Apr' & len >= 600 ~ 'winter',
+      mo %in% 'Apr' & len < 400 ~ 'summer'
+    )
+  )
+
 # join addl abundance data wiht new biodat
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 

@@ -1255,7 +1255,7 @@ renderPlot({
 ### Growth by environment {.tabset .tabset-pills}
 
 ```{r}
-grodat <- reactive({
+grodat_winter <- reactive({
 
   # inputs
   chm <- input$chm
@@ -1266,7 +1266,8 @@ grodat <- reactive({
   dat <- chmdatsum %>% 
     filter(var %in% chm) %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-    select(date, yr, cohortyr, mo, station, len, !!dis, ave:dlt) %>% 
+    select(date, yr, cohortyr, mo, station, len, !!dis, ave:dlt, cohortseas) %>% 
+    filter(cohortseas %in% 'winter') %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
     filter(chemvar %in% val) %>% 
     filter(station %in% sta) %>% 
@@ -1276,50 +1277,62 @@ grodat <- reactive({
   
 })
 
-gromod <- reactive({
+gromod_winter <- reactive({
   
   # input
-  grodat <- grodat()
+  grodat_winter <- grodat_winter()
 
   # complete model
-  allchm <- lm(len ~ chemval, data = grodat)
-  alldis <- lm(len ~ disval, data = grodat)
+  allchm <- lm(len ~ chemval, data = grodat_winter)
+  alldis <- lm(len ~ disval, data = grodat_winter)
   
-  # by cohort years
-  bycohortyr <- grodat %>% 
-    group_by(cohortyr) %>% 
-    nest %>% 
-    mutate(
-      modchm = purrr::map(data, function(x){ try({lm(len ~ chemval, data = x)})}),
-      moddis = purrr::map(data, function(x){ try({lm(len ~ disval, data = x)})})
-    )
-  bycohortyroutchm <- pull(bycohortyr, modchm)
-  names(bycohortyroutchm) <- pull(bycohortyr, cohortyr) %>% paste0(., 'chm')
-  bycohortyroutdis <- pull(bycohortyr, moddis)
-  names(bycohortyroutdis) <- pull(bycohortyr, cohortyr) %>% paste0(., 'dis')
-  
-  
-  # by seasons
-  byseas <- grodat %>% 
-    group_by(mo) %>% 
-    nest %>% 
-    mutate(
-      modchm = purrr::map(data, function(x){ try({lm(len ~ chemval, data = x)})}),
-      moddis = purrr::map(data, function(x){ try({lm(len ~ disval, data = x)})})
-    )
-  byseasoutchm <- pull(byseas, modchm)
-  names(byseasoutchm) <- pull(byseas, mo) %>% paste0(., 'chm')
-  byseasoutdis <- pull(byseas, moddis)
-  names(byseasoutdis) <- pull(byseas, mo) %>% paste0(., 'dis')
 
   # combine all    
   out <- c(
     allchm = list(allchm), 
-    alldis = list(alldis),
-    bycohortyroutchm,
-    bycohortyroutdis,
-    byseasoutchm,
-    byseasoutdis
+    alldis = list(alldis)
+  )
+  
+  return(out)
+  
+})
+
+grodat_summer <- reactive({
+
+  # inputs
+  chm <- input$chm
+  val <- input$val
+  sta <- input$sta
+  dis <- input$dis
+
+  dat <- chmdatsum %>% 
+    filter(var %in% chm) %>% 
+    full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+    select(date, yr, cohortyr, mo, station, len, !!dis, ave:dlt, cohortseas) %>% 
+    filter(cohortseas %in% 'summer') %>% 
+    gather('chemvar', 'chemval', ave:dlt) %>% 
+    filter(chemvar %in% val) %>% 
+    filter(station %in% sta) %>% 
+    rename(disval = !!dis)
+  
+  return(dat)
+  
+})
+
+gromod_summer <- reactive({
+  
+  # input
+  grodat_summer <- grodat_summer()
+
+  # complete model
+  allchm <- lm(len ~ chemval, data = grodat_summer)
+  alldis <- lm(len ~ disval, data = grodat_summer)
+  
+
+  # combine all    
+  out <- c(
+    allchm = list(allchm), 
+    alldis = list(alldis)
   )
   
   return(out)
@@ -1327,16 +1340,16 @@ gromod <- reactive({
 })
 ```
 
-#### All
+#### Winter cohort
 
 ```{r}
 renderPlot({
   
   # inputs
-  grodat <- grodat()
+  grodat_winter <- grodat_winter()
   chmlab <- chmlab()
 
-  p <- ggplot(grodat, aes(x = chemval, y = len)) +
+  p <- ggplot(grodat_winter, aes(x = chemval, y = len)) +
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se =T, colour = 'red') +
     geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
@@ -1353,23 +1366,22 @@ renderPlot({
   
 }, height = 400, width = 400)
 
-renderPrint({lapply(gromod()['allchm'], summary)})
+renderPrint({lapply(gromod_winter()['allchm'], summary)})
 ```
 
-#### Grouped by year
+#### Summer cohort
 
 ```{r}
 renderPlot({
   
   # inputs
-  grodat <- grodat()
+  grodat_summer <- grodat_summer()
   chmlab <- chmlab()
 
-  p <- ggplot(grodat, aes(x = chemval, y = len)) +
+  p <- ggplot(grodat_summer, aes(x = chemval, y = len)) +
     # geom_line(aes(group = station), colour = 'grey') +
-    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    stat_smooth(method = 'lm', se =T, colour = 'red') +
     geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
-    facet_grid(~ cohortyr) + #, scales = 'free') +
     ylab("Average size") +
     xlab(chmlab) +
     theme_bw(base_family = 'serif', base_size = 16) +
@@ -1381,53 +1393,23 @@ renderPlot({
 
   return(p)
   
-}, height = 300, width = 850)
+}, height = 400, width = 400)
 
-renderPrint({lapply(gromod()[c('2014chm', '2015chm', '2016chm')], summary)})
-```
-
-#### Grouped by month
-
-```{r}
-renderPlot({
-  
-  # inputs
-  grodat <- grodat()
-  chmlab <- chmlab()
-
-  p <- ggplot(grodat, aes(x = chemval, y = len)) +
-    # geom_line(aes(group = station), colour = 'grey') +
-    stat_smooth(method = 'lm', se = F, colour = 'red') +
-    geom_label(aes(fill = cohortyr, group = station, label = station), size = 3, colour = 'grey') +
-    facet_grid(~ mo) + #, scales = 'free') +
-    ylab("Average size") +
-    xlab(chmlab) +
-    theme_bw(base_family = 'serif', base_size = 16) +
-    theme(
-      strip.background = element_blank(), 
-      legend.title = element_blank(), 
-      legend.position = 'top'
-    )
-
-  return(p)
-  
-}, height = 300, width = 850)
-
-renderPrint({lapply(gromod()[c('Julchm', 'Sepchm', 'Aprchm')], summary)})
+renderPrint({lapply(gromod_summer()['allchm'], summary)})
 ```
 
 ### Growth by dissolution {.tabset .tabset-pills}
 
-#### All
+#### Winter cohort
 
 ```{r}
 renderPlot({
   
   # inputs
-  grodat <- grodat()
+  grodat_winter <- grodat_winter()
   dis <- input$dis
 
-  p <- ggplot(grodat, aes(x = disval, y = len)) +
+  p <- ggplot(grodat_winter, aes(x = disval, y = len)) +
     # geom_line(aes(group = station), colour = 'grey') +
     stat_smooth(method = 'lm', se =T, colour = 'red') +
     geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
@@ -1444,23 +1426,22 @@ renderPlot({
   
 }, height = 400, width = 400)
 
-renderPrint({lapply(gromod()['alldis'], summary)})
+renderPrint({lapply(gromod_winter()['alldis'], summary)})
 ```
 
-#### Grouped by year
+#### Summer cohort
 
 ```{r}
 renderPlot({
   
   # inputs
-  grodat <- grodat()
+  grodat_summer <- grodat_summer()
   dis <- input$dis
 
-  p <- ggplot(grodat, aes(x = disval, y = len)) +
+  p <- ggplot(grodat_summer, aes(x = disval, y = len)) +
     # geom_line(aes(group = station), colour = 'grey') +
-    stat_smooth(method = 'lm', se = F, colour = 'red') +
+    stat_smooth(method = 'lm', se =T, colour = 'red') +
     geom_label(aes(fill = mo, group = station, label = station), size = 3, colour = 'grey') +
-    facet_grid(~ cohortyr) + #, scales = 'free') +
     ylab("Average size") +
     xlab(dis) +
     theme_bw(base_family = 'serif', base_size = 16) +
@@ -1472,41 +1453,10 @@ renderPlot({
 
   return(p)
   
-}, height = 300, width = 850)
+}, height = 400, width = 400)
 
-renderPrint({lapply(gromod()[c('2014dis', '2015dis', '2016dis')], summary)})
+renderPrint({lapply(gromod_summer()['alldis'], summary)})
 ```
-
-#### Grouped by month
-
-```{r}
-renderPlot({
-  
-  # inputs
-  grodat <- grodat()
-  dis <- input$dis
-
-  p <- ggplot(grodat, aes(x = disval, y = len)) +
-    # geom_line(aes(group = station), colour = 'grey') +
-    stat_smooth(method = 'lm', se = F, colour = 'red') +
-    geom_label(aes(fill = cohortyr, group = station, label = station), size = 3, colour = 'grey') +
-    facet_grid(~ mo) + #, scales = 'free') +
-    ylab("Average size") +
-    xlab(dis) +
-    theme_bw(base_family = 'serif', base_size = 16) +
-    theme(
-      strip.background = element_blank(), 
-      legend.title = element_blank(), 
-      legend.position = 'top'
-    )
-
-  return(p)
-  
-}, height = 300, width = 850)
-
-renderPrint({lapply(gromod()[c('Juldis', 'Sepdis', 'Aprdis')], summary)})
-```
-
 
 ### Abundance by environment {.tabset .tabset-pills}
 
