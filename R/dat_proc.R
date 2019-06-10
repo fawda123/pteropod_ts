@@ -118,11 +118,11 @@ biodat <- biodat %>%
 biodat <- biodat %>% 
   mutate(
     cohortseas = case_when(
-      mo %in% 'Jul' & len >= 700 ~ 'summer',
-      mo %in% 'Sep' & len >= 1000 ~ 'summer', 
-      mo %in% 'Sep' & len < 500 ~ 'winter',
+      mo %in% 'Jul' ~ 'summer',
+      mo %in% 'Sep' & len >= 1200 ~ 'summer', 
+      mo %in% 'Sep' & len < 1200 ~ 'winter',
       mo %in% 'Apr' & len >= 600 ~ 'winter',
-      mo %in% 'Apr' & len < 400 ~ 'summer'
+      mo %in% 'Apr' & len < 600 ~ 'summer'
     )
   )
 
