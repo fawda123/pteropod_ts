@@ -492,7 +492,7 @@ modmos <- lm(dissval ~ chemval * factor(mo), data = toplo)#$toplo[!toplo$cohorty
 summary(modmos)
 ```
 
-Combined model, average aragonite (above is minimum).
+Combined model, average aragonite.
 ```{r eval = T}
 #data
 tomod <- chmdatsum %>% 
@@ -524,7 +524,39 @@ toprd <- data.frame(
 toprd
 ```
 
-## oxygen and aragonite 
+Combined model, minimum aragonite.
+```{r eval = T}
+#data
+tomod <- chmdatsum %>% 
+  filter(var %in% 'ara') %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -var, -abu, -len) %>% 
+  gather('dissvar', 'dissval', typ1:typ3) %>% 
+  gather('chemvar', 'chemval', ave:dlt) %>% 
+  filter(dissvar %in% 'typ3') %>% 
+  filter(chemvar %in% 'min') 
+# model
+modall <- lm(dissval ~ chemval, data = tomod)
+
+# plot
+plot(dissval ~ chemval, data = tomod)
+abline(reg = modall)
+
+# predicted
+ave <- mean(tomod$chemval, na.rm = T)
+toprd <- data.frame(
+    chemval = c(ave + 0.5, ave), 
+    lab = c('pre (1750)', 'current')
+  ) %>% 
+  mutate(
+    type3 = predict(modall, newdata = ., se.fit = T)$fit,
+    sefit = predict(modall, newdata = ., se.fit = T)$se.fit
+  ) %>% 
+  rename(ara = chemval)
+toprd
+```
+
+## Oxygen and aragonite 
 
 [download](figs/oxyint.jpg)
 ```{r results = 'hide'}
@@ -535,29 +567,21 @@ oxydat <- chmdatsum %>%
   select(-lon, -lat, -abu, -len) %>% 
   gather('dissvar', 'dissval', typ1:typ3) %>% 
   gather('chemvar', 'chemval', ave:dlt) %>% 
-  filter(dissvar %in% 'typ3')
+  filter(dissvar %in% 'typ3') 
 
 plo1dat <- oxydat %>% 
-  filter(var %in% 'araund' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'ave') %>% 
+  filter(var %in% 'ara' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'min') %>% 
   select(-chemvar) %>% 
   spread(var, chemval) %>% 
-  filter(mo %in% c('Jul')) %>% 
-  mutate(araund = 100 * araund)
+  filter(mo %in% c('Jul')) 
 
-plo2dat <- oxydat %>% 
-  filter(var %in% 'ara' & chemvar %in% 'rng' | var %in% 'oxy' & chemvar %in% 'ave') %>% 
-  select(-chemvar) %>% 
-  spread(var, chemval) %>% 
-  filter(mo %in% c('Jul'))
-
-plo1mod <- lm(dissval ~ araund * oxy, data = plo1dat)
-plo2mod <- lm(dissval ~ ara + oxy, data = plo2dat)
+plo1mod <- lm(dissval ~ ara * oxy, data = plo1dat)
 
 # colors
 cols <- RColorBrewer::brewer.pal(9, 'RdBu')
   
 # get data to plot
-pldat <- get_pldat(plo1mod, 'oxy', fct = 1.02, pos = 'right') 
+pldat <- get_pldat(plo1mod, 'oxy', fct = 0.75, pos = 'left') 
 pl1a <- pldat[[1]]
 pl1b <- pldat[[2]]
   
@@ -568,38 +592,46 @@ p1 <- ggplot() +
   geom_line(data = pl1a, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
   geom_text(data = pl1b, aes(x= x, y = y, label = lab), hjust = 0) +
   theme_bw() +
-  scale_x_continuous('% water column undersaturated', limits = c(0, 95)) +
-  scale_colour_gradientn(expression(paste('Average ',O[2])), colours = cols) + 
-  theme(
-    axis.title.y = element_blank(),
-    legend.position = 'none'
-  )
+  scale_x_continuous(expression("Minimum observed "*Omega)) +
+  scale_y_continuous('% type III dissolution') +
+  coord_cartesian(ylim = c(-10, 53), xlim = c(0.19, 0.8)) +
+  scale_colour_gradientn(expression(paste('Minimum\nobserved ',O[2])), colours = cols) 
 
-# get data to plot
-pldat <- get_pldat(plo2mod, 'oxy', pos = 'right', fct = 1.02) 
-pl2a <- pldat[[1]]
-pl2b <- pldat[[2]]
-  
-# names for aes_string
-nms <- names(pl2a)
-p2 <- ggplot() +
-  geom_ribbon(data = pl2a, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
-  geom_line(data = pl2a, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
-  geom_text(data = pl2b, aes(x= x, y = y, label = lab), hjust = 0) +
+
+# input
+oxydat <- chmdatsum %>% 
+  filter(var %in% c('ara', 'oxy', 'araund')) %>% 
+  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
+  select(-lon, -lat, -abu, -len) %>% 
+  gather('dissvar', 'dissval', typ1:typ3) %>% 
+  gather('chemvar', 'chemval', ave:dlt) %>% 
+  filter(dissvar %in% 'typ3') 
+
+## second plot
+# aragonite vs oxy
+
+colmos <- diverging_hcl(3, 'Blue-Red')
+
+plo2dat <- oxydat %>% 
+  filter(var %in% 'ara' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'min') %>% 
+  select(-chemvar) %>% 
+  spread(var, chemval) 
+
+p2 <- ggplot(plo2dat, aes(x = oxy, y = ara, size = dissval)) + 
+  geom_point(aes(fill = mo), pch = 21, alpha = 0.8) + 
+  scale_fill_manual(values = colmos) + 
   theme_bw() +
-  scale_x_continuous(expression('Observed range for '*Omega), limits = c(0.3, 2.65)) +
-  scale_colour_gradientn(expression(paste('Average ',O[2])), colours = cols) + 
-  theme(axis.title.y = element_blank())
-pleg <- g_legend(p2)
-p2 <- p2 + theme(legend.position = 'none') 
-
-jpeg('figs/oxyint.jpg', family = 'serif', height = 3, width = 5, res = 300, units = 'in')
-# wrap_elements(textGrob('% type III dissolution        ', rot = 90)) + (p1 + p2 + plot_layout(ncol = 1)) + pleg + plot_layout(ncol = 3, widths = c(0.1, 1, 0.4))
-wrap_elements(textGrob('% type III dissolution', rot = 90)) + p2 + pleg + plot_layout(ncol = 3, widths = c(0.1, 1, 0.4))
+  # geom_smooth(method = 'lm', se = F, colour = 'black') +
+  scale_size('% type III\ndissolution', range = c(2, 9)) + 
+  scale_y_continuous(expression("Minimum observed  "*Omega)) +
+  scale_x_continuous(expression(paste('Minimum observed ',O[2]))) +
+  guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4)))
+png('figs/oxyint.jpg', family = 'serif', height = 7, width = 5, res = 300, units = 'in')
+p2 + p1 + plot_layout(ncol = 1)
 dev.off()
 ```
 
-```{r oxyint, fig.cap = 'Additive effects of dissolved oxygen and aragonite saturation state on dissolution measures of pteropods. The plot shows a linear model with significant main effects for both oxygen and the observed range of aragonite saturation state in the water column for each site.  The model is based on July observations across all sample years. The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
+```{r oxyint, fig.cap = 'Relationships of dissolved oxygen and aragonite saturation state with dissolution measures of pteropods.  The top plot shows the minimum observed aragonite saturation state at a site against minimum observed disssolved oxygen, with points sized by average dissolution and colored by month.  The bottom plot shows results for a linear model of dissolution against aragonite state and oxygen that includes both main and interaction effects (July only).  The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
 knitr::include_graphics('figs/oxyint.jpg')
 ```
 
