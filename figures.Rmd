@@ -626,13 +626,52 @@ p2 <- ggplot(plo2dat, aes(x = oxy, y = ara, size = dissval)) +
   scale_y_continuous(expression("Minimum observed  "*Omega)) +
   scale_x_continuous(expression(paste('Minimum observed ',O[2]))) +
   guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4)))
-png('figs/oxyint.jpg', family = 'serif', height = 7, width = 5, res = 300, units = 'in')
+jpeg('figs/oxyint.jpg', family = 'serif', height = 7, width = 5, res = 300, units = 'in')
 p2 + p1 + plot_layout(ncol = 1)
 dev.off()
 ```
 
 ```{r oxyint, fig.cap = 'Relationships of dissolved oxygen and aragonite saturation state with dissolution measures of pteropods.  The top plot shows the minimum observed aragonite saturation state at a site against minimum observed disssolved oxygen, with points sized by average dissolution and colored by month.  The bottom plot shows results for a linear model of dissolution against aragonite state and oxygen that includes both main and interaction effects (July only).  The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
 knitr::include_graphics('figs/oxyint.jpg')
+```
+
+## Growth cohorts
+
+[download](figs/groplo.jpg)
+```{r results = 'hide'}
+
+toplo <- biodat %>% 
+  mutate(
+    cdate = ymd(paste(2015, month(date), day(date), sep = '-')),
+    cohortseasgrp = case_when(
+      yr == 2014 & cohortseas == 'winter' ~ 'winter2014',
+      yr == 2015 & cohortseas == 'winter' & mo == 'Apr' ~ 'winter2014',
+      yr == 2015 & cohortseas == 'summer' ~ 'summer2015',
+      yr == 2015 & cohortseas == 'winter' & mo == 'Sep' ~ 'winter2015',
+      yr == 2016 & cohortseas == 'winter' & mo == 'Apr' ~ 'winter2015',
+      yr == 2016 & cohortseas == 'summer' ~ 'summer2016'
+      ), 
+    cohortseas = factor(cohortseas, levels = c('summer', 'winter'), labels = c('summer', 'fall'))
+    ) %>% 
+  filter(!is.na(cohortseasgrp)) %>% 
+  rename(Cohort = cohortseas)
+
+p <- ggplot(toplo, aes(x = date, y = len)) + 
+  geom_point(aes(fill = Cohort), pch = 21, size = 3, alpha = 0.7) + 
+  geom_smooth(method = 'lm', aes(group = cohortseasgrp, colour = Cohort, fill = Cohort), show.legend = F) + 
+  theme_bw(base_family = 'serif') + 
+  ylab(expression(paste("Length (", mu, "m)"))) +
+  theme(
+    axis.title.x = element_blank(), 
+    legend.position = 'top'
+  ) 
+
+jpeg('figs/groplo.jpg', family = 'serif', height = 3, width = 7, res = 300, units = 'in')
+p
+dev.off()
+```
+```{r groplo, fig.cap = 'Growth cohorts represented as summer and fall individauls with measured lengths against time.  Growth trends within each cohort are shown with linear regression lines.', fig.align = 'center', out.width = "90%"}
+knitr::include_graphics('figs/groplo.jpg')
 ```
 
 ## Cumulative stress plot
