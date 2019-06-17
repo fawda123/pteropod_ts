@@ -27,6 +27,7 @@ library(mapproj)
 library(viridis)
 library(colorspace)
 library(grid)
+library(ggrepel)
 
 prj <- 4326 # wgs84
 
@@ -659,6 +660,7 @@ toplo <- biodat %>%
 p <- ggplot(toplo, aes(x = date, y = len)) + 
   geom_point(aes(fill = Cohort), pch = 21, size = 3, alpha = 0.7) + 
   geom_smooth(method = 'lm', aes(group = cohortseasgrp, colour = Cohort, fill = Cohort), show.legend = F) + 
+  geom_text_repel(aes(label = station), size = 2.5) +
   theme_bw(base_family = 'serif') + 
   ylab(expression(paste("Length (", mu, "m)"))) +
   theme(

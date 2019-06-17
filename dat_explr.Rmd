@@ -87,7 +87,7 @@ chmlab <- reactive({
 ```{r}
 column(12, 
   column(4, 
-    selectInput('chm', 'Select chemistry:', choices = c('ara', 'araund', 'co3', 'ph', 'pco2', 'temp', 'oxy'))
+    selectInput('chm', 'Select chemistry:', choices = c('ara', 'araund', 'co3', 'ph', 'pco2', 'temp', 'oxy', 'chla'))
   ),
   
   column(4, 
@@ -216,7 +216,7 @@ renderPrint({lapply(dismod()['all'], summary)})
 ```{r}
 column(12, 
        column(4, 
-              selectInput('chm2', 'Select second chemistry variable:', choices = c('ara', 'araund', 'co3', 'ph', 'pco2', 'temp', 'oxy'), selected = 'temp')
+              selectInput('chm2', 'Select second chemistry variable:', choices = c('ara', 'araund', 'co3', 'ph', 'pco2', 'temp', 'oxy', 'chla'), selected = 'temp')
        ),
        
        column(4, 
@@ -825,7 +825,7 @@ renderPrint({lapply(gromod_summer()['allchm'], summary)})
 ```{r}
 column(12, 
        column(4, 
-              selectInput('chm3', 'Select second chemistry variable:', choices = c('ara', 'araund', 'co3', 'ph', 'pco2', 'temp', 'oxy'), selected = 'temp')
+              selectInput('chm3', 'Select second chemistry variable:', choices = c('ara', 'araund', 'co3', 'ph', 'pco2', 'temp', 'oxy', 'chla'), selected = 'temp')
        ),
        
        column(4, 

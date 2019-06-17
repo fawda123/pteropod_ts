@@ -136,7 +136,7 @@ save(biodat, file = 'data/biodat.RData', compress = 'xz')
 chmdatall <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, `DEPTH (M)`, CTDTMP_DEG_C_ITS90, CTDSAL_PSS78,
          CTDOXY_UMOL_KG_ADJ, `NITRATE umol_kg`, `NITRITE umol_kg`, `AMMONIA umol_kg`, `PHOSPHATE umol_kg`, 
-         `SILICATE umol_kg`, `Ph Total in situ`, `pCO2 uatm`, `CO3-- umol/kg`, `Omega Ar`, Revelle) %>% 
+         `SILICATE umol_kg`, `Ph Total in situ`, `pCO2 uatm`, `CO3-- umol/kg`, `Omega Ar`, Revelle, `CHLA (ug/l)`) %>% 
   rename(
     date = Date_collected, 
     station = STATION_NO,
@@ -156,12 +156,13 @@ chmdatall <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DAT
     pco2 = `pCO2 uatm`, 
     co3 = `CO3-- umol/kg`,
     ara = `Omega Ar`,
-    revelle = Revelle
+    revelle = Revelle,
+    chla = `CHLA (ug/l)`
   ) %>% 
   mutate(
     date = as.Date(date)
   ) %>% 
-  gather('var', 'val', temp:revelle) %>% 
+  gather('var', 'val', temp:chla) %>% 
   group_by(station) %>% 
   mutate(
     lat = mean(lat), 

@@ -67,7 +67,7 @@ totab <- chmdatraw %>%
  names(totab)[1] <- ''
  
 # table stuff
-cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  Stations are grouped by exposure categories defined by multivariate clustering (Figure 2). Depth is tee maximum sampled depth for seasonal CTD casts.  Average (min/max) aragonite saturation state and salinity values are also shown based on approximately nine visits to each site from 2014 to 2016.'
+cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  Stations are grouped by exposure categories defined by multivariate clustering (Figure 2). Depth is the maximum sampled depth for seasonal CTD casts.  Average (min/max) aragonite saturation state and salinity values are also shown based on approximately nine visits to each site from 2014 to 2016.'
 
 # table
 knitr::kable(totab, caption = cap.val)
