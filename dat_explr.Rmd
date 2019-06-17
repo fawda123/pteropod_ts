@@ -228,7 +228,7 @@ column(12,
 )
 column(12, 
        column(4, 
-              selectInput('flt', 'Filter data by:', choices = c('nothing', 'Jul', 'Apr', 'Sep', '2014', '2015', '2016'))
+              selectInput('flt', 'Filter data by:', choices = c('nothing', 'Jul', 'Apr', 'Sep', '2014', '2015', '2016', 'summer cohort', 'winter cohort'))
               )
        )
 ```
@@ -267,6 +267,11 @@ mod2dat <- reactive({
   if(flt %in% c('2014', '2015', '2016'))
     dat <- dat %>% filter(cohortyr %in% as.numeric(flt))
 
+  if(flt %in% c('summer cohort', 'winter cohort')){
+    flt <- gsub('\\scohort$', '', flt)
+    dat <- dat %>% filter(cohortseas %in% flt)
+  }
+  
   return(dat)
   
 })
@@ -837,7 +842,7 @@ column(12,
 )
 column(12, 
        column(4, 
-              selectInput('flt2', 'Filter data by:', choices = c('nothing', 'Jul', 'Apr', 'Sep', '2014', '2015', '2016'))
+              selectInput('flt2', 'Filter data by:', choices = c('nothing', 'Jul', 'Apr', 'Sep', '2014', '2015', '2016', 'summer cohort', 'winter cohort'))
               )
        )
 ```
@@ -873,6 +878,11 @@ mod3dat <- reactive({
 
   if(flt2 %in% c('2014', '2015', '2016'))
     dat <- dat %>% filter(cohortyr %in% as.numeric(flt2))
+  
+  if(flt2 %in% c('summer cohort', 'winter cohort')){
+    flt2 <- gsub('\\scohort$', '', flt2)
+    dat <- dat %>% filter(cohortseas %in% flt2)
+  }
   
   return(dat)
   

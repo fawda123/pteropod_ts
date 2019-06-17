@@ -42,13 +42,13 @@ totab <- chmdatraw %>%
     lon = paste0(lon, '/'),
     lat = round(mean(lat, na.rm = T), 1)
   ) %>% 
-  filter(var %in% c('ara', 'sal')) %>% 
+  filter(var %in% c('ara', 'sal', 'chla')) %>% 
   unite('est', ave, min, max, sep = ' ') %>% 
   unite('loc', lon, lat, sep = '') %>% 
   spread(var, est) %>% 
   ungroup %>% 
   left_join(groups, by = 'station') %>% 
-  dplyr::select(group, station, loc, depth, ara, sal) %>% 
+  dplyr::select(group, station, loc, depth, ara, sal, chla) %>% 
   mutate(
     station = factor(station, levels = c(22, 8, 28, 38, 4, 12, 402))
   ) %>% 
@@ -61,13 +61,14 @@ totab <- chmdatraw %>%
     `lon/lat` = loc, 
     `Depth (m)` = depth, 
     `Aragonite saturation ($\\Omega$)` = ara,
-    `Salinity (psu)` = sal
+    `Salinity (psu)` = sal, 
+    `Chlorophyll-a ($\\mu$g/L)` = chla
   )
   
  names(totab)[1] <- ''
  
 # table stuff
-cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  Stations are grouped by exposure categories defined by multivariate clustering (Figure 2). Depth is the maximum sampled depth for seasonal CTD casts.  Average (min/max) aragonite saturation state and salinity values are also shown based on approximately nine visits to each site from 2014 to 2016.'
+cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  Stations are grouped by exposure categories defined by multivariate clustering (Figure 2). Depth is the maximum sampled depth for seasonal CTD casts.  Average (min/max) aragonite saturation state, salinity, and chlorophyll-a values are also shown based on approximately nine visits to each site from 2014 to 2016.'
 
 # table
 knitr::kable(totab, caption = cap.val)
