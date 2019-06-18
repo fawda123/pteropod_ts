@@ -15,12 +15,13 @@ library(jtools)
 library(huxtable)
 library(flextable)
 library(officer)
+library(here)
 
 # source('R/funcs.R')
 
-load(file = '../data/chmdatraw.RData')
-load(file = '../data/chmdatsum.RData')
-load(file = '../data/biodat.RData')
+load(file = here('data', 'chmdatraw.RData'))
+load(file = here('data', 'chmdatsum.RData'))
+load(file = here('data', 'biodat.RData'))
 
 groups <- tibble(
   station = c(22, 8, 28, 38, 4, 12, 402),
