@@ -506,6 +506,7 @@ tomod <- chmdatsum %>%
   filter(chemvar %in% 'ave') 
 # model
 modall <- lm(dissval ~ chemval, data = tomod)
+summary(modall)
 
 # plot
 plot(dissval ~ chemval, data = tomod)
@@ -514,7 +515,7 @@ abline(reg = modall)
 # predicted
 ave <- mean(tomod$chemval, na.rm = T)
 toprd <- data.frame(
-    chemval = c(ave + 0.5, ave), 
+    chemval = c(ave + 0.4, ave), 
     lab = c('pre (1750)', 'current')
   ) %>% 
   mutate(
@@ -571,7 +572,7 @@ oxydat <- chmdatsum %>%
   filter(dissvar %in% 'typ3') 
 
 plo1dat <- oxydat %>% 
-  filter(var %in% 'ara' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'min') %>% 
+  filter(var %in% 'ara' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'max') %>% 
   select(-chemvar) %>% 
   spread(var, chemval) %>% 
   filter(mo %in% c('Jul')) 
@@ -595,44 +596,15 @@ p1 <- ggplot() +
   theme_bw() +
   scale_x_continuous(expression("Minimum observed "*Omega)) +
   scale_y_continuous('% type III dissolution') +
-  coord_cartesian(ylim = c(-10, 53), xlim = c(0.19, 0.8)) +
-  scale_colour_gradientn(expression(paste('Minimum\nobserved ',O[2])), colours = cols) 
+  coord_cartesian(ylim = c(-10, 90), xlim = c(0.19, 0.75)) +
+  scale_colour_gradientn(expression(paste('Maximum\nobserved ',O[2])), colours = cols) 
 
-
-# input
-oxydat <- chmdatsum %>% 
-  filter(var %in% c('ara', 'oxy', 'araund')) %>% 
-  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -abu, -len) %>% 
-  gather('dissvar', 'dissval', typ1:typ3) %>% 
-  gather('chemvar', 'chemval', ave:dlt) %>% 
-  filter(dissvar %in% 'typ3') 
-
-## second plot
-# aragonite vs oxy
-
-colmos <- diverging_hcl(3, 'Blue-Red')
-
-plo2dat <- oxydat %>% 
-  filter(var %in% 'ara' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'min') %>% 
-  select(-chemvar) %>% 
-  spread(var, chemval) 
-
-p2 <- ggplot(plo2dat, aes(x = oxy, y = ara, size = dissval)) + 
-  geom_point(aes(fill = mo), pch = 21, alpha = 0.8) + 
-  scale_fill_manual(values = colmos) + 
-  theme_bw() +
-  # geom_smooth(method = 'lm', se = F, colour = 'black') +
-  scale_size('% type III\ndissolution', range = c(2, 9)) + 
-  scale_y_continuous(expression("Minimum observed  "*Omega)) +
-  scale_x_continuous(expression(paste('Minimum observed ',O[2]))) +
-  guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4)))
-jpeg('figs/oxyint.jpg', family = 'serif', height = 7, width = 5, res = 300, units = 'in')
-p2 + p1 + plot_layout(ncol = 1)
+jpeg('figs/oxyint.jpg', family = 'serif', height = 4, width = 5, res = 300, units = 'in')
+p1
 dev.off()
 ```
 
-```{r oxyint, fig.cap = 'Relationships of dissolved oxygen and aragonite saturation state with dissolution measures of pteropods.  The top plot shows the minimum observed aragonite saturation state at a site against minimum observed disssolved oxygen, with points sized by average dissolution and colored by month.  The bottom plot shows results for a linear model of dissolution against aragonite state and oxygen that includes both main and interaction effects (July only).  The color range depicts the minimum and maximum observed values for average dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
+```{r oxyint, fig.cap = 'Relationships of dissolved oxygen and aragonite saturation state with dissolution measures of pteropods.  The plot shows results for a linear model of dissolution against minimum observed aragonite state and maximum oxygen that includes both main and interaction effects (July only).  The color range depicts the minimum and maximum observed values for maximum dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
 knitr::include_graphics('figs/oxyint.jpg')
 ```
 
@@ -672,7 +644,7 @@ jpeg('figs/groplo.jpg', family = 'serif', height = 3, width = 7, res = 300, unit
 p
 dev.off()
 ```
-```{r groplo, fig.cap = 'Growth cohorts represented as summer and fall individauls with measured lengths against time.  Growth trends within each cohort are shown with linear regression lines.', fig.align = 'center', out.width = "90%"}
+```{r groplo, fig.cap = 'Growth cohorts represented as summer and fall individuals with measured lengths against time.  Growth trends within each cohort are shown with linear regression lines.  Individuals from April observations were assigned to seasonal growth cohorts using a cutoff length of 600 $\\mu$m between juveniles of the summer cohort and adults of the prior fall cohort. All individuals in July were assumed to be adults of the summer cohort (i.e., no surviving adults from the previous fall cohort). Similarly, all individuals in September were considered juveniles of the fall cohort (i.e., no surviving adults from the previous summer cohort).', fig.align = 'center', out.width = "90%"}
 knitr::include_graphics('figs/groplo.jpg')
 ```
 
@@ -684,7 +656,9 @@ knitr::include_graphics('figs/groplo.jpg')
 toplo <- strdat %>% 
   rename(
     rsp = 'typ3'
-  )
+  ) %>% 
+  ungroup %>% 
+  mutate(strscnt = scales::rescale(strscnt, to = c(0, 1)))
   
 p1 <- ggplot(toplo, aes(x = mo, y = strscnt, group = costa)) +
   geom_line(linetype = 'dotted') +
