@@ -160,7 +160,8 @@ chmdatall <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DAT
     chla = `CHLA (ug/l)`
   ) %>% 
   mutate(
-    date = as.Date(date)
+    date = as.Date(date), 
+    chla = log10(chla)
   ) %>% 
   gather('var', 'val', temp:chla) %>% 
   group_by(station) %>% 
@@ -168,7 +169,7 @@ chmdatall <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DAT
     lat = mean(lat), 
     lon = mean(lon),
     yr = year(date), 
-    mo = month(date)
+    mo =month(date)
   ) %>% 
   filter(mo %in% c(4, 7, 9, 10)) %>%
   mutate(

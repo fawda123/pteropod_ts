@@ -296,9 +296,12 @@ biosub <- biodat %>%
   select(cohortyr, mo, station, typ3)
 
 chmsub <- chmdatsum %>% 
-  filter(var %in% c('ara', 'sal', 'temp', 'oxy')) %>%
-  select(-date, -yr, -lon, -lat, -max, -min, -std, -rng, -dlt) %>% 
-  spread(var, ave)
+  filter(var %in% c('ara', 'sal', 'temp', 'oxy', 'chla', 'ph')) %>%
+  select(-date, -yr, -lon, -lat, -max, -std, -rng, -dlt) %>% 
+  gather('valtyp', 'val', ave, min) %>% 
+  filter(var %in% 'ara' & valtyp %in% 'min' | !var %in% 'ara' & valtyp %in% 'ave') %>% 
+  select(-valtyp) %>% 
+  spread(var, val)
 
 tomod <- chmsub %>% 
   left_join(biosub, by = c('cohortyr', 'mo', 'station')) %>% 
@@ -310,7 +313,7 @@ tomod <- chmsub %>%
   column_to_rownames('stat_moyr')
 
 # pc mod
-mod <- prcomp(tomod[ , c('ara', 'oxy', 'sal', 'temp')], scale. = T, center = T)
+mod <- prcomp(tomod[ , c('ara', 'oxy', 'sal', 'temp', 'chla', 'ph')], scale. = T, center = T)
 
 # no labels
 p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'blue') + 
@@ -336,7 +339,7 @@ dev.off()
 ```
 
 
-```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the sites with text identifiers for the site number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
+```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, chlorophyll-a (log-transformed), pH, and minimum aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the sites with text identifiers for the site number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/pcastat.jpg')
 ```
 
