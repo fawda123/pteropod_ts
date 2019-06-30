@@ -1,0 +1,24 @@
+language: r
+sudo: false
+cache:
+  packages: true
+  directories:
+  - _cache
+git:
+  depth: 3
+script:
+- Rscript -e 'knitr::knit("README.Rmd", output = "README.html")'
+- git config --global user.name "fawda123"
+- git config --global user.email "mbafs2012@gmail.com"
+- git add -A
+- git commit -a -m "Updating README rmd build for website via travis-ci.org [ci skip]"
+- git push https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git HEAD:${TRAVIS_BRANCH}
+notifications:
+  email:
+    recipients:
+    - mbafs2012@gmail.com
+    on_success: change
+    on_failure: change
+env:
+  global:
+  - secure: QRvwUZ+ZVcM48/RXxBRhjEnAl7zNjtDtWg94BgolT/O5/sIBcbaqMSCNhB25e3KkNfYhlonzvi0JO8q3FazjyR9TsmuXlbLJXgABMO+42jBvhAPsEtgMXpiR7a7Tkx/pixY/s3BxHR4wrfJkEJQQd5oc4vcqwuuFtHoaLomVkVHM3jpq1ZWTwCQbwINSbAlxiB6+O4KINcqe780knh0eBbV2d+c3g3PpAHL3BRpsyUTlmOdnyez29bf/GHYGP9FG0K/qBKxEjy7tVjaEQuRDDpAu3ZzvMxwSVragbdiKN8VMADstbQ6Rp+bK1lXtEVzVnuS8LIU3nrQkg6pi0j7bXyucj2+qeSlnfVGVoOANmRIedNoZP6MwV0hIx0uPe3ncctdi8BxPQdsZbwR2NHW3wCH3CPX2Aci2eYDYTFnCfhY3oNCialh8eTBy8tzuwowvpwQ0BT4zK5hvoqa0uy1uQGhXJ9kDdS7jkBYDKsVfKZ56wvPBZbI+uHmaMwcx4Y3K07SllUoSaXzc1EMBan2vl8M9Mhy2dqf75dVCz6r54Ipsgp46NSPl5mPCdR/dFxheizP4IdV6G5cE7AWhTOWmku40MugY6c2oWLkYtOABOmXQybIPWfVaDjqW95NFd/dTayxmAAJccNNpbFWzKTVmSZo7U1qcT754d8omAk1wX0c=
