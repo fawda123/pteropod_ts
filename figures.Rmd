@@ -647,7 +647,7 @@ jpeg('figs/groplo.jpg', family = 'serif', height = 3, width = 7, res = 300, unit
 p
 dev.off()
 ```
-```{r groplo, fig.cap = 'Growth cohorts represented as summer and fall individuals with measured lengths against time.  Growth trends within each cohort are shown with linear regression lines.  Individuals from April observations were assigned to seasonal growth cohorts using a cutoff length of 600 $\\mu$m between juveniles of the summer cohort and adults of the prior fall cohort. All individuals in July were assumed to be adults of the summer cohort (i.e., no surviving adults from the previous fall cohort). Similarly, all individuals in September were considered juveniles of the fall cohort (i.e., no surviving adults from the previous summer cohort).', fig.align = 'center', out.width = "90%"}
+```{r groplo, fig.cap = 'Growth cohorts represented as summer and fall individuals with measured lengths against time.  Growth trends within each cohort are shown with linear regression lines.  Individuals from April observations were assigned to seasonal growth cohorts using a cutoff length of 500 $\\mu$m between juveniles of the summer cohort and adults of the prior fall cohort. All individuals in July were assumed to be adults of the summer cohort (i.e., no surviving adults from the previous fall cohort). Similarly, all individuals in September were considered juveniles of the fall cohort (i.e., no surviving adults from the previous summer cohort).', fig.align = 'center', out.width = "90%"}
 knitr::include_graphics('figs/groplo.jpg')
 ```
 
