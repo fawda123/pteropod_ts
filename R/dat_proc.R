@@ -121,8 +121,8 @@ biodat <- biodat %>%
       mo %in% 'Jul' ~ 'summer',
       mo %in% 'Sep' & len >= 1200 ~ 'summer', 
       mo %in% 'Sep' & len < 1200 ~ 'winter',
-      mo %in% 'Apr' & len >= 600 ~ 'winter',
-      mo %in% 'Apr' & len < 600 ~ 'summer'
+      mo %in% 'Apr' & len >= 500 ~ 'winter',
+      mo %in% 'Apr' & len < 500 ~ 'summer'
     )
   )
 
