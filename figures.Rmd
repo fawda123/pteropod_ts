@@ -409,7 +409,7 @@ p2 <- ggplot(toplo2, aes(x = factor(date), y = min)) +
   guides(guide_legend) +
   scale_color_discrete(name="") +
   scale_fill_manual('Cohort months', values = colmos) +
-  ylab(expression("Minimum observed  "*Omega)) + 
+  ylab(expression(Omega['ar,min'])) + 
   scale_x_discrete(labels = format(sort(unique(toplo2$date)), '%Y-%m')) + 
   geom_hline(yintercept = 1.2, colour = 'tomato1', size = 1, alpha = 0.7) +
   geom_text(data = strdat, aes(y = 1, label = round(strscnt, 1)), colour = 'tomato1', vjust = 1.2, size = 3, hjust = -0.2)
@@ -476,7 +476,7 @@ p2 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
   guides(colour = guide_legend(override.aes = list(size = 4, alpha = 0.6)))
 
 jpeg('figs/disvara.jpg', height = 6, width = 7, units = 'in', res = 300, family = 'serif')
-wrap_elements(textGrob('           % type III dissolution', rot = 90)) + (p1 + p2 + wrap_elements(textGrob(expression("Minimum observed "*Omega))) + plot_layout(ncol = 1, heights = c(1, 1, 0.1))) + plot_layout(ncol = 2, widths = c(0.1, 1))
+wrap_elements(textGrob('           % type III dissolution', rot = 90)) + (p1 + p2 + wrap_elements(textGrob(expression(Omega['ar, min']))) + plot_layout(ncol = 1, heights = c(1, 1, 0.1))) + plot_layout(ncol = 2, widths = c(0.1, 1))
 dev.off()
 ```
 
@@ -597,12 +597,12 @@ p1 <- ggplot() +
   geom_line(data = pl1a, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
   geom_text(data = pl1b, aes(x= x, y = y, label = lab), hjust = 0) +
   theme_bw() +
-  scale_x_continuous(expression("Minimum observed "*Omega)) +
+  scale_x_continuous(expression(Omega['ar, min'])) +
   scale_y_continuous('% type III dissolution') +
   coord_cartesian(ylim = c(-10, 90), xlim = c(0.19, 0.75)) +
-  scale_colour_gradientn(expression(paste('Maximum\nobserved ',O[2])), colours = cols) 
+  scale_colour_gradientn(expression(paste(O[2], ' (', mu, 'mol ', kg^{-1}, ')')), colours = cols) 
 
-jpeg('figs/oxyint.jpg', family = 'serif', height = 4, width = 5, res = 300, units = 'in')
+jpeg('figs/oxyint.jpg', family = 'serif', height = 4, width = 5.25, res = 300, units = 'in')
 p1
 dev.off()
 ```
