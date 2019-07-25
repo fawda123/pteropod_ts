@@ -58,6 +58,12 @@ colmst <- viridis(3)
 colmst[3] <- '#FFB90F'
 
 colmos <- diverging_hcl(3, 'Blue-Red')
+
+# cluster
+clsts <- tibble(
+  station = c(402, 38, 28, 22, 12, 8, 4),
+  clst = c(3, 2, 2, 1, 3, 2, 3)
+)
 ```
 
 # Figures {.tabset}
@@ -275,12 +281,6 @@ knitr::include_graphics('figs/clsts.jpg')
 [download](figs/pcastat.jpg)
 ```{r, results = 'hide'}
 
-# cluster
-clsts <- tibble(
-  station = c(402, 38, 28, 22, 12, 8, 4),
-  clst = c(3, 2, 2, 1, 3, 2, 3)
-)
-
 # pteropod birthday
 strt <- '2008-06-01' %>% 
   as.Date
@@ -296,7 +296,7 @@ biosub <- biodat %>%
   select(cohortyr, mo, station, typ3)
 
 chmsub <- chmdatsum %>% 
-  filter(var %in% c('ara', 'sal', 'temp', 'oxy', 'chla', 'ph')) %>%
+  filter(var %in% c('ara', 'temp', 'oxy', 'sal')) %>%
   select(-date, -yr, -lon, -lat, -max, -std, -rng, -dlt) %>% 
   gather('valtyp', 'val', ave, min) %>% 
   filter(var %in% 'ara' & valtyp %in% 'min' | !var %in% 'ara' & valtyp %in% 'ave') %>% 
@@ -313,10 +313,10 @@ tomod <- chmsub %>%
   column_to_rownames('stat_moyr')
 
 # pc mod
-mod <- prcomp(tomod[ , c('ara', 'oxy', 'sal', 'temp', 'chla', 'ph')], scale. = T, center = T)
+mod <- prcomp(tomod[ , c('ara', 'oxy', 'temp', 'sal')], scale. = T, center = T)
 
 # no labels
-p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'blue') + 
+p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'blue', alpha = 0.85) + 
   scale_size(range = c(2, 8)) +
   scale_colour_manual(values = rev(colmst)) + 
   scale_fill_manual(values = rev(colmst)) + 
@@ -325,8 +325,15 @@ p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$ty
 pleg <- g_legend(p1)
 p1 <- p1 + theme(legend.position = 'none')
  
+p2 <- ggord(mod, axes = c('1', '3'), grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'blue', alpha = 0.85) + 
+  scale_size(range = c(2, 8)) +
+  scale_colour_manual(values = rev(colmst)) + 
+  scale_fill_manual(values = rev(colmst)) + 
+  guides(size = guide_legend(title = '% type III dissolution')) + 
+  theme(legend.position = 'none')
+
 # with labels
-p2 <- ggord(mod, obslab = T, vec_ext = 4, size = 1.8, coord_fix = F, labcol = 'blue') 
+# p2 <- ggord(mod, obslab = T, vec_ext = 4, size = 1.8, coord_fix = F, labcol = 'blue')
 
 jpeg('figs/pcastat.jpg', family = 'serif', height = 4.5, width = 8.5, res = 300, units = 'in')
 grid.arrange(
@@ -339,14 +346,67 @@ dev.off()
 ```
 
 
-```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, chlorophyll-a (log-transformed), pH, and minimum aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the sites with text identifiers for the site number, followed by the month and sample year.", out.width = "90%", fig.align = 'center'}
+```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and minimum aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the same as the first plot but for the first and third principal component axes.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/pcastat.jpg')
 ```
+
+## CTD profiles
+
+[download](figs/ctdplo.jpg)
+```{r, results = 'hide', eval = F}
+
+# cluster
+clsts <- tibble(
+  station = c(402, 38, 28, 22, 12, 8, 4),
+  clst = c(3, 2, 2, 1, 3, 2, 3)
+)
+
+# date levels, labels
+dtlev <- as.character(sort(unique(chmdatraw$date)))
+dtlab <- as.character(format(unique(chmdatraw$date), '%Y-%m'))
+
+# chemistry raw data
+toplo <- chmdatraw %>% 
+  filter(var %in% 'ara') %>% 
+  left_join(clsts, by = 'station') %>%   
+  filter(!is.na(val)) %>% 
+  group_by(date, mo, station, clst, depth, var) %>% 
+  summarise(val = mean(val)) %>% 
+  ungroup %>% 
+  mutate(
+    date = factor(date, levels = dtlev, labels = dtlab)
+  ) %>%
+  na.omit 
+
+ggplot(toplo, aes(x = val, y = depth)) +
+  # geom_path() + 
+  geom_point(aes(fill = mo), pch = 21, colour = 'black', size = 3) + 
+  # geom_smooth(method="nls", 
+  #             formula = y ~ SSasymp(x, yf, y0, log_alpha),
+  #             se=FALSE) +
+  geom_vline(linetype = 'dashed', aes(xintercept = 1)) + 
+  geom_vline(linetype = 'dotted', aes(xintercept = 1.2)) + 
+  scale_y_reverse() + 
+  ylab('Depth') +
+  xlab('ara') + 
+  facet_grid(clst~mo) + 
+  theme_bw(base_family = 'serif', base_size = 14) +
+  theme(
+    strip.background = element_blank(), 
+    legend.title = element_blank(),
+    panel.grid = element_blank(),
+    # axis.text.x  = element_text(size = 10, angle = 45, hjust = 1),
+    legend.position = 'top'
+  ) 
+
+```
+
 
 ## Observed time series
 
 [download](figs/obsdat.jpg)
 ```{r, results = 'hide'}
+
 strdat <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
   full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
@@ -363,18 +423,24 @@ strdat <- chmdatsum %>%
   mutate(
     strsdis = cumsum(aracat),
     strscnt = cumsum(aradff)
-  ) 
+  ) %>%  
+  left_join(clsts, by = 'station') %>% 
+  unite('station', station, clst, sep = ' (', remove = F) %>% 
+  mutate(station = paste0(station, ')'))
 
 # bio
 toplo1 <- biodat %>% 
   select(date, yr, cohortyr, mo, station, typ1, typ2, typ3) %>% 
   gather('diss', 'val', typ1:typ3) %>% 
-  filter(diss %in% 'typ3')
+  filter(diss %in% 'typ3') %>% 
+  left_join(clsts, by = 'station') %>% 
+  unite('station', station, clst, sep = ' (', remove = F) %>% 
+  mutate(station = paste0(station, ')'))
 
 p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
   geom_line(aes(group = cohortyr)) +
   geom_point(aes(fill = mo), alpha = 0.7, size = 3, pch = 21) +
-  facet_grid(station~.) +
+  facet_grid(reorder(station, clst)~.) +
   theme_bw(base_family = 'serif', base_size = 10) +
   theme(
     strip.background = element_blank(), 
@@ -390,16 +456,19 @@ p1 <- ggplot(toplo1, aes(x = factor(date), y = val)) +
 
 # chem
 toplo2 <- chmdatsum %>% 
-  filter(var %in% 'ara')
+  filter(var %in% 'ara') %>% 
+  left_join(clsts, by = 'station') %>% 
+  unite('station', station, clst, sep = ' (',remove = F) %>% 
+  mutate(station = paste0(station, ')'))
 
 p2 <- ggplot(toplo2, aes(x = factor(date), y = min)) +
   geom_segment(data = strdat, aes(y = 1.2, yend = chmval, xend = factor(date), colour = 'Cumulative stress difference'), linetype = 'dotted', size = 0.9) +
   geom_line(aes(group = cohortyr)) +
   geom_point(aes(fill = mo), alpha = 0.7, size  = 3, pch = 21) +
-  facet_grid(station~.) +
+  facet_grid(reorder(station, clst)~.) +
   theme_bw(base_family = 'serif', base_size = 10) + 
   theme(
-    strip.background = element_blank(), 
+    strip.background = element_blank(),
     axis.title.x = element_blank(), 
     # legend.title = element_blank(),
     axis.text.x  = element_text(size = 8, angle = 45, hjust = 1),
@@ -411,8 +480,8 @@ p2 <- ggplot(toplo2, aes(x = factor(date), y = min)) +
   scale_fill_manual('Cohort months', values = colmos) +
   ylab(expression(Omega['ar,min'])) + 
   scale_x_discrete(labels = format(sort(unique(toplo2$date)), '%Y-%m')) + 
-  geom_hline(yintercept = 1.2, colour = 'tomato1', size = 1, alpha = 0.7) +
-  geom_text(data = strdat, aes(y = 1, label = round(strscnt, 1)), colour = 'tomato1', vjust = 1.2, size = 3, hjust = -0.2)
+  geom_text(data = strdat, aes(y = 1, label = round(strscnt, 1)), colour = 'tomato1', vjust = 1.2, size = 3, hjust = -0.2) +
+  geom_hline(aes(yintercept = 1.2), colour = 'tomato1', size = 1, alpha = 0.7)
 
 pleg <- g_legend(p2)
 p2 <- p2 + theme(legend.position = 'none')
@@ -424,7 +493,7 @@ wrap_elements(pleg) +
 dev.off()
 ```
 
-```{r obsdat, fig.cap = "Observed time series for each station (rows) showing \\% type III dissolution of pteropods (left) and observed minimum aragonite saturation state (right).  Points at each station are connected by cohort years.  The right plot shows the selected aragonite threshold ($\\Omega_{crit} = 1$) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.", out.width = "80%", fig.align = 'center'}
+```{r obsdat, fig.cap = "Observed time series for each station (rows, group number from Figure \\@ref(fig:clstmap) in parentheses) showing \\% type III dissolution of pteropods (left) and observed minimum aragonite saturation state (right).  Points at each station are connected by cohort years.  The right plot shows the selected aragonite threshold ($\\Omega_{crit} = 1$) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/obsdat.jpg')
 ```
 
@@ -607,8 +676,12 @@ p1
 dev.off()
 ```
 
-```{r oxyint, fig.cap = 'Relationships of dissolved oxygen and aragonite saturation state with dissolution measures of pteropods.  The plot shows results for a linear model of dissolution against minimum observed aragonite state and maximum oxygen that includes both main and interaction effects (July only).  The color range depicts the minimum and maximum observed values for maximum dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
+```{r oxyint, fig.cap = 'Relationships of dissolved oxygen and aragonite saturation state with dissolution measures of pteropods.  The plot shows results for a linear model of dissolution against minimum observed aragonite state and maximum oxygen that includes both main and interaction effects (July only, F = 6.1, df = 3,16, R2 = 0.53, p < 0.05).  The color range depicts the minimum and maximum observed values for maximum dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
 knitr::include_graphics('figs/oxyint.jpg')
+```
+
+```{r}
+summary(plo1mod)
 ```
 
 ## Growth cohorts
@@ -627,16 +700,18 @@ toplo <- biodat %>%
       yr == 2016 & cohortseas == 'winter' & mo == 'Apr' ~ 'winter2015',
       yr == 2016 & cohortseas == 'summer' ~ 'summer2016'
       ), 
-    cohortseas = factor(cohortseas, levels = c('summer', 'winter'), labels = c('summer', 'fall'))
+    cohortseas = factor(cohortseas, levels = c('summer', 'winter'), labels = c('summer', 'fall')), 
+    date = floor_date(date, unit = 'month')
     ) %>% 
   filter(!is.na(cohortseasgrp)) %>% 
   rename(Cohort = cohortseas)
 
 p <- ggplot(toplo, aes(x = date, y = len)) + 
   geom_point(aes(fill = Cohort), pch = 21, size = 3, alpha = 0.7) + 
-  geom_smooth(method = 'lm', aes(group = cohortseasgrp, colour = Cohort, fill = Cohort), show.legend = F) + 
+  geom_smooth(method = 'lm', aes(group = cohortseasgrp, colour = Cohort, fill = Cohort), show.legend = F) +
   geom_text_repel(aes(label = station), size = 2.5) +
   theme_bw(base_family = 'serif') + 
+  scale_x_date(date_breaks = '2 months', date_labels = '%b %Y') + 
   ylab(expression(paste("Length (", mu, "m)"))) +
   theme(
     axis.title.x = element_blank(), 

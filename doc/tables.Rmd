@@ -31,6 +31,9 @@ groups <- tibble(
 
 ```{r statvals, echo = F}
 totab <- chmdatraw %>% 
+  mutate(
+    val = ifelse(var %in% 'chla', 10^val, val)
+  ) %>% 
   group_by(station, var) %>% 
   summarise(
     depth = round(max(depth, na.rm = T), 0),
@@ -76,7 +79,7 @@ cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  St
 knitr::kable(totab, caption = cap.val)
 ```
 
-*Table \@ref(tab:araminmod): \(\#tab:araminmod) Linear multiple regression models testing the additive effects of minimum observed aragonite saturation state, cohort year (factor), and months (factor) on extent of type III dissolution in pteropods.  Results for four models are shown where the first two columns are for relationships grouped by cohort year (Figure 5, top row) and the second two columns are for relationships grouped by month (Figure 5, bottom row).  Separate models were also run with and without 2016 data because of missing April observations in 2016.  Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
+*Table \@ref(tab:araminmod): \(\#tab:araminmod) Linear multiple regression models testing the additive effects of minimum observed aragonite saturation state, cohort year (factor), and months (factor) on extent of type III dissolution in pteropods.  Results for four models are shown where the first two columns are for relationships grouped by cohort year (Figure 5, top row) and the second two columns are for relationships grouped by month (Figure 5, bottom row).  Models in the first two columns included a year variable as a fixed effect and models in the second two columns included a month variable as a fixed effect, in addition to minimum aragonite saturation state as a fixed effect for all models. Separate models were also run with and without 2016 cohort-year data because of missing April observations in 2017 (the final month for the 2016 cohort).  Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
 ```{r, results = 'asis', echo = F}
 
 tomod <- chmdatsum %>% 
