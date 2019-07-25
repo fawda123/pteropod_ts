@@ -376,8 +376,8 @@ toplo <- chmdatraw %>%
   mutate(
     date = factor(date, levels = dtlev, labels = dtlab),
     alph = case_when(
-      val > 1.2 ~ 0.1, 
-      val > 1 & val <= 1.2 ~ 0.1,
+      val > 1.2 ~ 0.3, 
+      val > 1 & val <= 1.2 ~ 0.3,
       val <= 1 ~ 1
     )
   ) %>%
@@ -410,7 +410,7 @@ p
 dev.off()
 ```
 
-```{r ctdplo, fig.cap = "Depth profiles of minimum aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap).  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted).  Point transparencies also correpond to the aragonite thresholds. ", out.width = "80%", fig.align = 'center'}
+```{r ctdplo, fig.cap = "Depth profiles of minimum aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap).  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted).  Point transparencies also correspond to observations above or below minimum saturation state of 1. ", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/ctdplo.jpg')
 ```
 
