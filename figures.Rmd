@@ -353,7 +353,7 @@ knitr::include_graphics('figs/pcastat.jpg')
 ## CTD profiles
 
 [download](figs/ctdplo.jpg)
-```{r, results = 'hide', eval = F}
+```{r, results = 'hide'}
 
 # cluster
 clsts <- tibble(
@@ -374,33 +374,45 @@ toplo <- chmdatraw %>%
   summarise(val = mean(val)) %>% 
   ungroup %>% 
   mutate(
-    date = factor(date, levels = dtlev, labels = dtlab)
+    date = factor(date, levels = dtlev, labels = dtlab),
+    alph = case_when(
+      val > 1.2 ~ 0.1, 
+      val > 1 & val <= 1.2 ~ 0.1,
+      val <= 1 ~ 1
+    )
   ) %>%
   na.omit 
 
-ggplot(toplo, aes(x = val, y = depth)) +
-  # geom_path() + 
-  geom_point(aes(fill = mo), pch = 21, colour = 'black', size = 3) + 
+p <- ggplot(toplo, aes(fill = factor(clst), x = val, y = depth)) +
+  geom_point(pch = 21, colour = 'black', size = 3, alpha = toplo$alph) +
   # geom_smooth(method="nls", 
   #             formula = y ~ SSasymp(x, yf, y0, log_alpha),
   #             se=FALSE) +
-  geom_vline(linetype = 'dashed', aes(xintercept = 1)) + 
-  geom_vline(linetype = 'dotted', aes(xintercept = 1.2)) + 
+  scale_fill_manual(values = rev(colmst)) + 
+  geom_vline(linetype = 'dashed', aes(xintercept = 1), size = 1) + 
+  geom_vline(linetype = 'dotted', aes(xintercept = 1.2), size = 1) + 
   scale_y_reverse() + 
-  ylab('Depth') +
-  xlab('ara') + 
+  scale_x_continuous(breaks = seq(0, 5, by = 0.5)) + 
+  ylab('Depth (m)') +
+  xlab(expression(Omega['ar,min'])) + 
   facet_grid(clst~mo) + 
   theme_bw(base_family = 'serif', base_size = 14) +
   theme(
     strip.background = element_blank(), 
     legend.title = element_blank(),
-    panel.grid = element_blank(),
-    # axis.text.x  = element_text(size = 10, angle = 45, hjust = 1),
-    legend.position = 'top'
+    legend.position = 'none',
+    # panel.grid = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(size = 8)
   ) 
-
+jpeg('figs/ctdplo.jpg', height = 6.5, width = 8, units = 'in', res = 300, family = 'serif')
+p
+dev.off()
 ```
 
+```{r ctdplo, fig.cap = "Depth profiles of minimum aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap).  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted).  Point transparencies also correpond to the aragonite thresholds. ", out.width = "80%", fig.align = 'center'}
+knitr::include_graphics('figs/ctdplo.jpg')
+```
 
 ## Observed time series
 
