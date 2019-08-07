@@ -79,7 +79,8 @@ knitr::include_graphics('figs/statmap.jpg')
 
 [download](figs/clsts.jpg)
 ```{r, results = 'hide'}
-toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
+toplo <-
+  read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
          CTDSAL_PSS78, CTDOXY_UMOL_KG_ADJ, `Omega Ar`) %>% 
   rename(
@@ -116,7 +117,21 @@ toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', 
   summarise(
     valmn = mean(val, na.rm = T),
     valsd = sd(val, na.rm = T)
-  ) %>% 
+  ) %>%
+  # nest %>%
+  # mutate(
+  #   data = purrr::pmap(list(var, data), function(var, data){
+  #     if(var == 'ara')
+  #       out <- min(data$val, na.rm = T)
+  #     if(var != 'ara')
+  #       out <- mean(data$val, na.rm = T)
+  #     
+  #     return(out)
+  #     
+  #   })
+  # ) %>%
+  # rename(valmn = data) %>% 
+  # unnest %>% 
   ungroup %>% 
   mutate(
     mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'))
@@ -127,7 +142,7 @@ toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', 
   mutate(
     
     disval = purrr::map(data, function(x){
-      
+
       x %>% 
         select(station, var, valmn) %>% 
         spread(var, valmn) %>% 
