@@ -75,6 +75,46 @@ clsts <- tibble(
 knitr::include_graphics('figs/statmap.jpg')
 ```
 
+## Site pteropod distributions
+
+[download](figs/biodst.jpg)
+```{r, results = 'hide'}
+colmos <- diverging_hcl(3, 'Blue-Red')
+
+# make cohortyr an ordered factor
+toplo <- biodat %>% 
+  mutate(cohortyr = factor(cohortyr, ordered = T)) %>% 
+  select(mo, station, yr,typ3, len) %>% 
+  gather('var', 'val', typ3, len) %>% 
+  mutate(
+    var = factor(var, levels = c('len', 'typ3'), labels = c('length (um)', '% type III dissolution'))
+  )
+
+p <- ggplot(toplo, aes(x = mo, y = val, fill = )) + 
+  geom_boxplot(aes(fill = mo), outlier.shape = NA, alpha = 0.4) + 
+  geom_label(aes(fill = mo, label = station), size = 4, alpha = 0.6, position = position_jitter(width = 0.3), 
+             label.padding = unit(0.1, "lines")) +
+  facet_wrap(~var, ncol = 2, scales = 'free_y', strip.position = 'left') + 
+  scale_fill_manual(values = colmos) + 
+  # scale_colour_manual(values = colmos) + 
+  theme_bw(base_family = 'serif', base_size = 14) +
+  theme(
+    strip.placement = 'outside', 
+    axis.title = element_blank(), 
+    strip.background = element_blank(), 
+    legend.position = 'none'
+  )
+
+
+jpeg('figs/biodst.jpg', height = 5, width = 8, units = 'in', res = 300, family = 'serif')
+print(p)
+dev.off()
+```
+
+```{r biodst, fig.cap = "Pteropod distributions by length (left) and dissolution (right) across sites and months.  Site numbers are shown in each point. Box plots represent the median values with the upper and lower limits of the boxes defined as the 25th and 75th percentile of the distributions.  The whiskers are 1.5 times the interquartile range.", out.width = "70%", fig.align = 'center'}
+knitr::include_graphics('figs/biodst.jpg')
+```
+
 ## Cluster analyses
 
 [download](figs/clsts.jpg)
