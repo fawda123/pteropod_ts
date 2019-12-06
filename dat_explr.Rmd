@@ -454,7 +454,7 @@ renderPlot({
   # date levels, labels
   dtlev <- as.character(sort(unique(chmdatraw$date)))
   dtlab <- as.character(format(unique(chmdatraw$date), '%Y-%m'))
-
+browser()
   # chemistry raw data
   toplo <- chmdatraw %>% 
     filter(var %in% chm) %>% 
@@ -462,9 +462,9 @@ renderPlot({
     mutate(
       date = factor(date, levels = dtlev, labels = dtlab)
     ) %>% 
-    filter(!is.na(val)) %>% 
     group_by(date, mo, station, depth, var) %>% 
-    summarise(val = mean(val))
+    summarise(val = mean(val, na.rm = T)) %>% 
+    filter(!is.na(station)) 
 
   p1 <- ggplot(toplo, aes(x = val, y = -depth)) +
       geom_path() + 
