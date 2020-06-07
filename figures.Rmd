@@ -119,8 +119,14 @@ knitr::include_graphics('figs/biodst.jpg')
 
 [download](figs/clsts.jpg)
 ```{r, results = 'hide'}
-toplo <-
-  read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
+depth_dat <- read_excel('raw/WOAC PS Cruise Plan.xlsx', sheet = 'Sheet2') %>% 
+  select(station = Station, depth = `Depth (m)`) %>% 
+  mutate(
+    station = gsub('^P', '', station),
+    station = as.numeric(station)
+    )
+
+toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', na = c('', '-999')) %>% 
   select(Date_collected, STATION_NO, LATITUDE_DEC, LONGITUDE_DEC, NISKIN_NO, CTDTMP_DEG_C_ITS90, 
          CTDSAL_PSS78, CTDOXY_UMOL_KG_ADJ, `Omega Ar`) %>% 
   rename(
@@ -134,51 +140,14 @@ toplo <-
     ara = `Omega Ar`,
     oxy = CTDOXY_UMOL_KG_ADJ
   ) %>% 
-  mutate(
-    date = as.Date(date)
-  ) %>% 
-  gather('var', 'val', temp:ara) %>% 
-  group_by(station) %>% 
-  mutate(
-    lat = mean(lat), 
-    lon = mean(lon),
-    yr = year(date), 
-    mo = month(date)
-  ) %>% 
-  filter(mo %in% c(4, 7, 9, 10)) %>%
-  mutate(
-    mo = case_when(
-      yr == 2014 & mo == 10 ~ 9,
-      TRUE ~ mo
-    ),
-    mo = month(mo, label = T)
-  ) %>% 
-  group_by(station, var, mo, lat, lon) %>% 
-  summarise(
-    valmn = mean(val, na.rm = T),
-    valsd = sd(val, na.rm = T)
+  left_join(depth_dat, by = 'station') %>% 
+  gather('var', 'val', temp:depth) %>% 
+  group_by(station, var) %>% 
+  summarize(
+    valmn = mean(val, na.rm = T)
   ) %>%
-  # nest %>%
-  # mutate(
-  #   data = purrr::pmap(list(var, data), function(var, data){
-  #     if(var == 'ara')
-  #       out <- min(data$val, na.rm = T)
-  #     if(var != 'ara')
-  #       out <- mean(data$val, na.rm = T)
-  #     
-  #     return(out)
-  #     
-  #   })
-  # ) %>%
-  # rename(valmn = data) %>% 
-  # unnest %>% 
   ungroup %>% 
-  mutate(
-    mo = factor(mo, levels = c('Jul', 'Sep', 'Apr'))
-  ) %>% 
-  group_by(mo) %>% 
-  nest %>% 
-  arrange(mo) %>% 
+  nest(data = everything()) %>% 
   mutate(
     
     disval = purrr::map(data, function(x){
@@ -201,39 +170,38 @@ toplo <-
     }), 
     
     cutval = purrr::map(clsval, function(x){
-  
+      
       # get cut groups
       cutree(x, k = 3)
       
     }), 
     
-    denplo = purrr::pmap(list(as.character(mo), cutval, clsval), function(mo, cutval, clsval){
-
+    denplo = purrr::pmap(list(cutval, clsval), function(cutval, clsval){
+      
       # get order
       clstord <- order.hclust(clsval) %>%
         cutval[.] %>%
         unique
-    
+      
       # get colors, correct by order
       cols <- colmst %>%
         .[clstord]
-    
+      
       pdend <- clsval %>%
         as.dendrogram %>%
         set("branches_k_color", k = 3, value = cols) %>%
         set("labels_colors", k = 3, value = cols) %>%
         set("labels_cex", 0.8)
-        
+      
       p1 <- as.ggdend(pdend) %>%  
-        ggplot(horiz = TRUE, offset_labels = -0.1) + 
-        ggtitle(mo)
+        ggplot(horiz = TRUE, offset_labels = -0.1)
       
       p1   
       
     }),
     
     displo = purrr::pmap(list(disval, cutval, clsval), function(disval, cutval, clsval){
-      
+
       # prep distance data to plot
       # long format of dist matrix
       toplo <- disval %>%
@@ -244,8 +212,8 @@ toplo <-
         arrange(dist) %>%
         mutate(
           dist = ifelse(station == station2, NA, dist)
-          )
-    
+        )
+      
       # get site order levels based on clustering
       sitfc <- clsval$labels[clsval$order]
       toplo <- toplo %>%
@@ -253,7 +221,7 @@ toplo <-
           station = factor(station, levels = sitfc),
           station2 = factor(station2, levels = sitfc)
         )
-    
+      
       # plot
       p <- ggplot(toplo) +
         geom_tile(aes(x = station, y = station2, fill = dist), colour = 'black') +
@@ -262,7 +230,7 @@ toplo <-
         scale_fill_gradient2('Dissimilarity between stations\nby water chemistry', low = 'lightblue', mid = 'white', high = 'tomato1', midpoint = 2.5, limits = c(0.5, 4.5)) +
         guides(fill = guide_colourbar(barheight = 0.5, barwidth = 10, label.theme = element_text(size = 11, angle = 0))) +
         pbase
-    
+      
       # index values of cluster cuts
       brks <- cutval %>%
         .[clsval$order] %>%
@@ -271,7 +239,7 @@ toplo <-
         which %>%
         `-` (0.5) %>%
         .[-1]
-    
+      
       p <- p +
         geom_vline(xintercept = brks, size = 1.5) +
         geom_hline(yintercept = brks, size = 1.5) +
@@ -280,28 +248,26 @@ toplo <-
           legend.position = 'top',
           legend.direction = 'horizontal'
         )
-    
+      
       return(p)
-
+      
     }), 
     
     disleg = purrr::map(displo, function(x) g_legend(x)),
     
-    displo = purrr::pmap(list(as.character(mo), displo), function(mo, displo){
+    displo = purrr::map(displo, function(x){
       
-      # p <- displo
-      # if(mo != 'Apr')
-        p <- displo + theme(legend.position = 'none')
-    
+      p <- x + theme(legend.position = 'none')
+      
       return(p)
-    
+      
     }), 
     
     mapplo = purrr::pmap(list(clsval, cutval), function(clsval, cutval){
-
+      
       mapplo <- locs %>%
         mutate(cutval = rev(cutval))
-
+      
       # plot the basemap
       p <- ggmap(bsmap) +
         geom_point(data = mapplo, aes(x = lon, y = lat, fill = factor(cutval)), pch = 21, size = 8, alpha = 0.7) +
@@ -313,21 +279,20 @@ toplo <-
           legend.position = 'none',
           axis.text.y = element_text(size = 8), 
           axis.text.x = element_text(size = 8, angle = 45, hjust = 1)
-          ) 
+        ) 
       
       return(p)
-          
+      
     })
     
   )
 
-jpeg('figs/clsts.jpg', height = 9.5, width = 7, units = 'in', res = 300, family = 'serif')
-wrap_elements(toplo$disleg[[1]]) + (toplo$denplo[[1]]+ toplo$displo[[1]] + toplo$mapplo[[1]] + toplo$denplo[[2]] + toplo$displo[[2]] + toplo$mapplo[[2]] + toplo$denplo[[3]] + toplo$displo[[3]] + toplo$mapplo[[3]] + plot_layout(ncol = 3, widths = c(1, 1, .5))) + plot_layout(ncol = 1, heights = c(0.05, 1))
+jpeg('figs/clsts.jpg', height = 3.5, width = 7, units = 'in', res = 300, family = 'serif')
+wrap_elements(toplo$disleg[[1]]) + (toplo$denplo[[1]]+ toplo$displo[[1]] + toplo$mapplo[[1]])+ plot_layout(ncol = 1, heights = c(0.05, 1))
 dev.off()
-
 ```
 
-```{r clstmap, fig.cap = "Clustering results of stations based on within-month averages for salinity, water temperature, dissolved oxygen, and aragonite saturation state.  Within-month averages are based on all environmental data collected across the sample years from 2014 to 2016 in the same month.  Results for each month (starting in July the prior year coinciding with spring spawning) are shown as dendrograms for site clustering (left), dissimilarity matrices showing mean Euclidean distances between observations at pairs of sites (middle), and spatial arrangements of the defined clusters (right).  Cluster groups were set at three based on approximate dendrogram separation between sites to explain dominant patterns among environmental variables.", out.width = "70%", fig.align = 'center'}
+```{r clstmap, fig.cap = "Clustering results of stations based on annual averages of salinity, water temperature, dissolved oxygen, and aragonite saturation state.  Station-depth is also included. Averages are based on all environmental data collected across the sample years from 2014 to 2016 in the same month.  Results are shown as dendrograms for site clustering (left), dissimilarity matrices showing mean Euclidean distances between observations at pairs of sites (middle), and spatial arrangements of the defined clusters (right).  Cluster groups were set at three based on approximate dendrogram separation between sites to explain dominant patterns among environmental variables.", out.width = "70%", fig.align = 'center'}
 knitr::include_graphics('figs/clsts.jpg')
 ```
 
@@ -335,6 +300,12 @@ knitr::include_graphics('figs/clsts.jpg')
 
 [download](figs/pcastat.jpg)
 ```{r, results = 'hide'}
+depth_dat <- read_excel('raw/WOAC PS Cruise Plan.xlsx', sheet = 'Sheet2') %>% 
+  select(station = Station, depth = `Depth (m)`) %>% 
+  mutate(
+    station = gsub('^P', '', station),
+    station = as.numeric(station)
+  )
 
 # pteropod birthday
 strt <- '2008-06-01' %>% 
@@ -361,6 +332,7 @@ chmsub <- chmdatsum %>%
 tomod <- chmsub %>% 
   left_join(biosub, by = c('cohortyr', 'mo', 'station')) %>% 
   left_join(clsts, by = 'station') %>% 
+  left_join(depth_dat, by = 'station') %>% 
   unite('stat_mo', station, mo, sep = ', ', remove = F) %>% 
   unite(stat_moyr, stat_mo, cohortyr, sep = ' ', remove = F) %>% 
   filter(!is.na(typ3)) %>% 
@@ -368,7 +340,7 @@ tomod <- chmsub %>%
   column_to_rownames('stat_moyr')
 
 # pc mod
-mod <- prcomp(tomod[ , c('ara', 'oxy', 'temp', 'sal')], scale. = T, center = T)
+mod <- prcomp(tomod[ , c('ara', 'oxy', 'temp', 'sal', 'depth')], scale. = T, center = T)
 
 # no labels
 p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'blue', alpha = 0.85) + 
@@ -379,7 +351,7 @@ p1 <- ggord(mod, grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$ty
   theme(legend.position = 'top')
 pleg <- g_legend(p1)
 p1 <- p1 + theme(legend.position = 'none')
- 
+
 p2 <- ggord(mod, axes = c('1', '3'), grp_in = as.character(tomod$clst), vec_ext = 4, size = tomod$typ3, coord_fix = F, labcol = 'blue', alpha = 0.85) + 
   scale_size(range = c(2, 8)) +
   scale_colour_manual(values = rev(colmst)) + 
@@ -397,11 +369,9 @@ grid.arrange(
   ncol = 1, heights = c(0.1, 1)
 )
 dev.off()
-
 ```
 
-
-```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and minimum aragonite saturation state. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the same as the first plot but for the first and third principal component axes.", out.width = "90%", fig.align = 'center'}
+```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and minimum aragonite saturation state. Station depth is also included. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the same as the first plot but for the first and third principal component axes.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/pcastat.jpg')
 ```
 
