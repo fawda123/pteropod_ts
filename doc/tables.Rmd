@@ -128,7 +128,11 @@ tomod <- chmdatsum %>%
   gather('ara', 'chmval', ave:dlt) %>% 
   filter(ara %in% 'min') %>% 
   mutate(
-    thrsh = 1,
+    thrsh = 1.2,
+    wts = case_when(
+      mo %in% c('Jul', 'Sep') ~ 1, 
+      mo == 'Apr' ~ 2
+    ),
     aracat = ifelse(chmval < thrsh, 1, 0),
     aradff = thrsh - chmval
     ) %>% 
@@ -136,18 +140,23 @@ tomod <- chmdatsum %>%
   group_by(costa) %>% 
   mutate(
     strsdis = cumsum(aracat),
-    strscnt = cumsum(aradff)
+    strscnt = cumsum(aradff),
+    strscntwt = cumsum(aradff * wts)
+  ) %>% 
+  ungroup %>% 
+  mutate(
+    strscntwt = scales::rescale(strscntwt, to = c(0, 1))
   )
 
-modyrs <- lm(typ3 ~ strscnt + factor(cohortyr), data = tomod)
-modyrsno2016 <- lm(typ3 ~ strscnt + factor(cohortyr), data = tomod[!tomod$cohortyr %in% '2016', ])
+modyrs <- lm(typ3 ~ strscntwt + factor(cohortyr), data = tomod)
+modyrsno2016 <- lm(typ3 ~ strscntwt + factor(cohortyr), data = tomod[!tomod$cohortyr %in% '2016', ])
 
 
 # summary(modmos)
 
 
 # use jtools
-coef_names <- c("Constant" = "(Intercept)", "S" = "strscnt", "2015" = "factor(cohortyr)2015", "2016" = "factor(cohortyr)2016")
+coef_names <- c("Constant" = "(Intercept)", "St" = "strscntwt", "2015" = "factor(cohortyr)2015", "2016" = "factor(cohortyr)2016")
 huxres <- export_summs(modyrs, modyrsno2016, model.names = c('By year', 'By year (no 2016)'), coefs = coef_names)
 
 brd <- fp_border(color="black")
