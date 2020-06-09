@@ -454,7 +454,7 @@ strdat <- chmdatsum %>%
     thrsh = 1.2,
     wts = case_when(
       mo %in% c('Jul', 'Sep') ~ 1, 
-      mo == 'Apr' ~ 2
+      mo == 'Apr' ~ 3.5
     ),
     aracat = ifelse(chmval < thrsh, 1, 0),
     aradff = thrsh - chmval
