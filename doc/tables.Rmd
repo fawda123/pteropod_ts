@@ -16,8 +16,8 @@ library(huxtable)
 library(flextable)
 library(officer)
 library(here)
-
-# source('R/funcs.R')
+library(readxl)
+source(here('R/funcs.R'))
 
 load(file = here('data', 'chmdatraw.RData'))
 load(file = here('data', 'chmdatsum.RData'))
@@ -27,6 +27,93 @@ groups <- tibble(
   station = c(22, 8, 28, 38, 4, 12, 402),
   group = c('mild exposure', rep('moderate exposure', 3), rep('severe exposure', 3))
   )
+```
+
+```{r cormat, echo = F, eval = T}
+depth_dat <- read_excel(here('raw/WOAC PS Cruise Plan.xlsx'), sheet = 'Sheet2') %>% 
+  select(station = Station, depth = `Depth (m)`) %>% 
+  mutate(
+    station = gsub('^P', '', station),
+    station = as.numeric(station)
+  )
+
+# pteropod birthday
+strt <- '2008-06-01' %>% 
+  as.Date
+
+# combine data for pca
+biosub <- biodat %>% 
+  select(cohortyr, mo, station, typ3)
+
+chmsub <- chmdatsum %>% 
+  filter(var %in% c('ara', 'temp', 'oxy', 'sal', 'chla')) %>%
+  select(-date, -yr, -lon, -lat, -max, -std, -rng, -dlt) %>% 
+  gather('valtyp', 'val', ave, min) %>% 
+  filter(var %in% 'ara' & valtyp %in% 'min' | !var %in% 'ara' & valtyp %in% 'ave') %>% 
+  select(-valtyp) %>% 
+  spread(var, val)
+
+tomod <- chmsub %>% 
+  left_join(biosub, by = c('cohortyr', 'mo', 'station')) %>% 
+  left_join(depth_dat, by = 'station') %>% 
+  select(ara, chla, oxy, sal, temp, typ3, depth) %>% 
+  na.omit()
+
+totab <- combn(names(tomod), 2) %>% 
+  t %>% 
+  as_tibble %>% 
+  rename(var1 = V1, var2 = V2) %>% 
+  group_by(var1, var2) %>% 
+  mutate(
+    tst = purrr::pmap(list(var1, var2), function(var1, var2){
+      
+      tst <- cor.test(tomod[[var1]], tomod[[var2]], method = 'spearman')
+      
+      return(tst)
+      
+    }), 
+    corv = purrr::map(tst, function(x) x$estimate), 
+    pval = purrr::map(tst, function(x) x$p.value)
+  ) %>% 
+  select(-tst) %>% 
+  unnest(corv, pval) %>% 
+  mutate(
+    pval = p_ast(pval), 
+    pval = gsub('ns', '', pval), 
+    corv = round(corv, 2), 
+    corv = as.character(corv), 
+    corv = stringi::stri_pad_right(corv, width = 4, pad = '0')
+  ) %>% 
+  unite('corv', corv, pval, sep = '') %>% 
+  spread(var2, corv, fill = '') %>% 
+  select(
+    var1,
+    `Chlorophyll-a ($\\mu$g/L)` = chla, 
+    `Dissolved Oxygen (mg/L)` = oxy ,
+    `Salinity (psu)` = sal, 
+    `Temperature (C)` = temp,  
+    `Dissolution (%)` = typ3, 
+    `Depth (m)` = depth
+    ) %>%  
+  mutate(
+    var1 = case_when(
+      var1 == 'ara' ~ 'Aragonite saturation ($\\Omega$)', 
+      var1 == 'chla' ~ 'Chlorophyll-a ($\\mu$g/L)', 
+      var1 == 'oxy' ~ 'Dissolved Oxygen (mg/L)', 
+      var1 == 'sal' ~ 'Salinity (psu)', 
+      var1 == 'temp' ~ 'Temperature (C)', 
+      var1 == 'typ3' ~ 'Dissolution (%)' 
+    )
+  )
+    
+names(totab)[1] <- ''
+
+
+# table stuff
+cap.val <- 'Correlation matrix between environmental characteristics and dissolution.  All values are Spearman rank correlations for all dates and stations.  $* p < 0.05$, $** p < 0.005$'
+
+# table
+knitr::kable(totab, caption = cap.val)
 ```
 
 ```{r statvals, echo = F}
@@ -46,13 +133,13 @@ totab <- chmdatraw %>%
     lon = paste0(lon, '/'),
     lat = round(mean(lat, na.rm = T), 1)
   ) %>% 
-  filter(var %in% c('ara', 'sal', 'chla', 'temp')) %>% 
+  filter(var %in% c('ara', 'sal', 'chla', 'temp', 'oxy')) %>% 
   unite('est', ave, min, max, sep = ' ') %>% 
   unite('loc', lon, lat, sep = '') %>% 
   spread(var, est) %>% 
   ungroup %>% 
   left_join(groups, by = 'station') %>% 
-  dplyr::select(group, station, loc, depth, ara, sal, chla, temp) %>% 
+  dplyr::select(group, station, loc, depth, ara, sal, chla, temp, oxy) %>% 
   mutate(
     station = factor(station, levels = c(22, 8, 28, 38, 4, 12, 402))
   ) %>% 
@@ -67,13 +154,14 @@ totab <- chmdatraw %>%
     `Aragonite saturation ($\\Omega$)` = ara,
     `Salinity (psu)` = sal, 
     `Chlorophyll-a ($\\mu$g/L)` = chla, 
-    `Temperature (C)` = temp
+    `Temperature (C)` = temp, 
+    `Dissolved Oxygen (mg/L)` = oxy
   )
   
  names(totab)[1] <- ''
  
 # table stuff
-cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  Stations are grouped by exposure categories defined by multivariate clustering (Figure 2). Depth is the maximum sampled depth for seasonal CTD casts.  Average (min/max) aragonite saturation state, salinity, chlorophyll-a, and temperature values are also shown based on approximately nine visits to each site from 2014 to 2016.'
+cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  Stations are grouped by exposure categories defined by multivariate clustering (Figure 2). Depth is the maximum sampled depth for seasonal CTD casts.  Average (min/max) aragonite saturation state, salinity, chlorophyll-a, temperature, and oxygen values are also shown based on approximately nine visits to each site and different samples by depth from 2014 to 2016. '
 
 # table
 knitr::kable(totab, caption = cap.val)
