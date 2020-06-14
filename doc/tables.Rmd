@@ -43,7 +43,7 @@ strt <- '2008-06-01' %>%
 
 # combine data for pca
 biosub <- biodat %>% 
-  select(cohortyr, mo, station, typ3)
+  select(cohortyr, mo, station, typ1, typ2, typ3)
 
 chmsub <- chmdatsum %>% 
   filter(var %in% c('ara', 'temp', 'oxy', 'sal', 'chla')) %>%
@@ -56,13 +56,18 @@ chmsub <- chmdatsum %>%
 tomod <- chmsub %>% 
   left_join(biosub, by = c('cohortyr', 'mo', 'station')) %>% 
   left_join(depth_dat, by = 'station') %>% 
-  select(ara, chla, oxy, sal, temp, typ3, depth) %>% 
+  select(ara, chla, oxy, sal, temp, typ1, typ2, typ3, depth) %>% 
   na.omit()
 
-totab <- combn(names(tomod), 2) %>% 
-  t %>% 
-  as_tibble %>% 
-  rename(var1 = V1, var2 = V2) %>% 
+faclevs <- tibble(
+  nmslng = c('Aragonite saturation ($\\Omega$)', 'Chlorophyll-a ($\\mu$g/L)',  'Depth (m)', 'Dissolved Oxygen (mg/L)', 'Salinity (psu)', 'Temperature (C)', 'Dissolution I (%)', 'Dissolution II (%)', 'Dissolution III (%)'),
+  nmshrt = c('ara', 'chla', 'depth', 'oxy', 'sal', 'temp', 'typ1', 'typ2', 'typ3')
+)
+
+totab <- crossing(
+    var1 = names(tomod),
+    var2 = names(tomod)
+  ) %>% 
   group_by(var1, var2) %>% 
   mutate(
     tst = purrr::pmap(list(var1, var2), function(var1, var2){
@@ -76,36 +81,23 @@ totab <- combn(names(tomod), 2) %>%
     pval = purrr::map(tst, function(x) x$p.value)
   ) %>% 
   select(-tst) %>% 
-  unnest(corv, pval) %>% 
+  unnest(c('corv', 'pval')) %>% 
   mutate(
     pval = p_ast(pval), 
     pval = gsub('ns', '', pval), 
     corv = round(corv, 2), 
-    corv = as.character(corv), 
-    corv = stringi::stri_pad_right(corv, width = 4, pad = '0')
+    corv = as.character(corv)
   ) %>% 
   unite('corv', corv, pval, sep = '') %>% 
-  spread(var2, corv, fill = '') %>% 
-  select(
-    var1,
-    `Chlorophyll-a ($\\mu$g/L)` = chla, 
-    `Dissolved Oxygen (mg/L)` = oxy ,
-    `Salinity (psu)` = sal, 
-    `Temperature (C)` = temp,  
-    `Dissolution (%)` = typ3, 
-    `Depth (m)` = depth
-    ) %>%  
   mutate(
-    var1 = case_when(
-      var1 == 'ara' ~ 'Aragonite saturation ($\\Omega$)', 
-      var1 == 'chla' ~ 'Chlorophyll-a ($\\mu$g/L)', 
-      var1 == 'oxy' ~ 'Dissolved Oxygen (mg/L)', 
-      var1 == 'sal' ~ 'Salinity (psu)', 
-      var1 == 'temp' ~ 'Temperature (C)', 
-      var1 == 'typ3' ~ 'Dissolution (%)' 
-    )
-  )
-    
+    var1 = factor(var1, levels = faclevs$nmshrt, labels = faclevs$nmslng),
+    var2 = factor(var2, levels = faclevs$nmshrt, labels = faclevs$nmslng)
+  ) %>% 
+  spread(var2, corv, fill = '')
+
+# totab <- totab[, -1]
+totab <- totab[-9, -2]
+totab[, -1][lower.tri(totab[, -1])] <- ''
 names(totab)[1] <- ''
 
 
