@@ -159,44 +159,139 @@ cap.val <- 'Environmental characteristics of sample stations in Puget Sound.  St
 knitr::kable(totab, caption = cap.val)
 ```
 
-*Table \@ref(tab:araminmod): \(\#tab:araminmod) Linear multiple regression models testing the additive effects of minimum observed aragonite saturation state, cohort year (factor), and months (factor) on extent of type III dissolution in pteropods.  Results for four models are shown where the first two columns are for relationships grouped by cohort year (Figure 5, top row) and the second two columns are for relationships grouped by month (Figure 5, bottom row).  Models in the first two columns included a year variable as a fixed effect and models in the second two columns included a month variable as a fixed effect, in addition to minimum aragonite saturation state as a fixed effect for all models. Separate models were also run with and without 2016 cohort-year data because of missing April observations in 2017 (the final month for the 2016 cohort).  Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
-```{r, results = 'asis', echo = F}
+```{r typ3aic, echo = F}
+# combine data for pca
+biosub <- biodat %>% 
+  select(cohortyr, mo, station, typ3)
 
-tomod <- chmdatsum %>% 
-  filter(var %in% 'ara') %>% 
-  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -var, -abu, -len) %>% 
-  gather('dissvar', 'dissval', typ1:typ3) %>% 
-  gather('chemvar', 'chemval', ave:dlt) %>% 
-  filter(dissvar %in% 'typ3') %>% 
-  filter(chemvar %in% 'min') %>% 
-  mutate(mo = factor(mo, ordered = F))
+chmsub <- chmdatsum %>% 
+  filter(var %in% c('ara', 'temp', 'oxy', 'sal')) %>%
+  select(-date, -yr, -lon, -lat, -max, -std, -rng, -dlt) %>% 
+  gather('valtyp', 'val', ave, min) %>% 
+  filter(var %in% 'ara' & valtyp %in% 'min' | !var %in% 'ara' & valtyp %in% 'ave') %>% 
+  select(-valtyp) %>% 
+  spread(var, val)
 
-modyrs <- lm(dissval ~ chemval + factor(cohortyr), data = tomod)#$toplo[!toplo$cohortyr %in% '2016', ])
-modyrsno2016 <- lm(dissval ~ chemval + factor(cohortyr), data = tomod[!tomod$cohortyr %in% '2016', ])
-modmos <- lm(dissval ~ chemval + factor(mo), data = tomod)#$toplo[!toplo$cohortyr %in% '2016', ])
-modmosno2016 <- lm(dissval ~ chemval + factor(mo), data = tomod[!tomod$cohortyr %in% '2016', ])
-# summary(modmos)
+tomod <- chmsub %>% 
+  left_join(biosub, by = c('cohortyr', 'mo', 'station'))
 
+mod1 <- lm(typ3 ~ ara + oxy + sal + temp, tomod)
+mod2 <- lm(typ3 ~ ara + oxy + sal, tomod)
+mod3 <- lm(typ3 ~ ara + oxy + temp, tomod)
+mod4 <- lm(typ3 ~ ara + sal + temp, tomod)
+mod5 <- lm(typ3 ~ oxy + sal + temp, tomod)
+mod6 <- lm(typ3 ~ ara + temp, tomod)
+mod7 <- lm(typ3 ~ ara + sal, tomod)
+mod8 <- lm(typ3 ~ ara + oxy, tomod)
+mod9 <- lm(typ3 ~ oxy + sal, tomod)
+mod10 <- lm(typ3 ~ oxy + temp, tomod)
+mod11 <- lm(typ3 ~ sal + temp, tomod)
+mod12 <- lm(typ3 ~ ara, tomod)
+mod13 <- lm(typ3 ~ sal, tomod)
+mod14 <- lm(typ3 ~ temp, tomod)
+mod15 <- lm(typ3 ~ oxy, tomod)
 
-# use jtools
-coef_names <- c("Constant" = "(Intercept)", "Ara, min" = "chemval", "2015" = "factor(cohortyr)2015", "2016" = "factor(cohortyr)2016", "Sep" = "factor(mo)Sep", "Apr" = "factor(mo)Apr")
-huxres <- export_summs(modyrs, modyrsno2016, modmos, modmosno2016, model.names = c('By year', 'By year (no 2016)', 'By month', 'By month (no 2016)'), coefs = coef_names)
+tab <- AIC(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15)
+tab <- tab %>% 
+  mutate(
+    frm = lapply(list(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15), formula) %>% unlist, 
+    rsq = lapply(list(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15), function(x){
+      pmax(0, summary(x)$adj.r.squared) %>% round(2)
+      }
+    ),
+    frm = case_when(
+      AIC == min(AIC) ~ paste0('__', frm, '__'), 
+      T ~ as.character(frm)
+    ),
+    rsq = case_when(
+      AIC == min(AIC) ~ paste0('__', rsq, '__'), 
+      T ~ as.character(rsq)
+    ),
+    df = case_when(
+      AIC == min(AIC) ~ paste0('__', df, '__'), 
+      T ~ as.character(df)
+    ),
+    AIC = round(AIC, 2), 
+    AIC = case_when(
+      AIC == min(AIC) ~ paste0('__', AIC, '__'), 
+      T ~ as.character(AIC)
+    )
+  ) %>% 
+  select(Model = frm, `Degrees of freedom` = df, `Adj. R-squared` = rsq, AIC)
 
-brd <- fp_border(color="black")
+# anova(mod12, mod7)
+# submod <- step(mod)
 
-# use flextable
-tab <- huxres %>%
-  as_FlexTable %>%
-  font(fontname = 'Times', part = 'all') %>%
-  fontsize(size = 12, part = 'all') %>%
-  border_remove %>%
-  autofit(add_h = 0) %>%
-  hline_top(part = 'all', border = brd) %>%
-  hline(i = 1, part = 'body', border = brd) %>%
-  hline(i= 13, part = 'body', border = brd) %>%
-  hline(i= 15, part = 'body', border = brd)
-tab
+cap.val <- 'Model comparison of pteropod dissolution (type III) against all combinations of environmental predictor variables.  All combinations are compared with Akaike Information Criterion (AIC) and the model with the lowest AIC (in bold) is considered the most parsimonious.  Models include data from all stations and sample dates. typ3: Type III dissolution, ara: minimum $\\omega$ saturation state, oxy: dissolved oxygen, sal: salinity, temp: temperature.'
+knitr::kable(tab, caption = cap.val)
+```
+
+```{r lenaic, echo = F}
+
+# combine data for pca
+biosub <- biodat %>% 
+  select(cohortyr, mo, station, len)
+
+chmsub <- chmdatsum %>% 
+  filter(var %in% c('ara', 'temp', 'oxy', 'sal')) %>%
+  select(-date, -yr, -lon, -lat, -max, -std, -rng, -dlt) %>% 
+  gather('valtyp', 'val', ave, min) %>% 
+  filter(var %in% 'ara' & valtyp %in% 'min' | !var %in% 'ara' & valtyp %in% 'ave') %>% 
+  select(-valtyp) %>% 
+  spread(var, val)
+
+tomod <- chmsub %>% 
+  left_join(biosub, by = c('cohortyr', 'mo', 'station'))
+
+mod1 <- lm(len ~ ara + oxy + sal + temp, tomod)
+mod2 <- lm(len ~ ara + oxy + sal, tomod)
+mod3 <- lm(len ~ ara + oxy + temp, tomod)
+mod4 <- lm(len ~ ara + sal + temp, tomod)
+mod5 <- lm(len ~ oxy + sal + temp, tomod)
+mod6 <- lm(len ~ ara + temp, tomod)
+mod7 <- lm(len ~ ara + sal, tomod)
+mod8 <- lm(len ~ ara + oxy, tomod)
+mod9 <- lm(len ~ oxy + sal, tomod)
+mod10 <- lm(len ~ oxy + temp, tomod)
+mod11 <- lm(len ~ sal + temp, tomod)
+mod12 <- lm(len ~ ara, tomod)
+mod13 <- lm(len ~ sal, tomod)
+mod14 <- lm(len ~ temp, tomod)
+mod15 <- lm(len ~ oxy, tomod)
+
+tab <- AIC(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15)
+tab <- tab %>% 
+  mutate(
+    frm = lapply(list(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15), formula) %>% unlist, 
+    rsq = lapply(list(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15), function(x){
+      pmax(0, summary(x)$adj.r.squared) %>% round(2)
+      }
+    ),
+    rsq = case_when(
+      AIC == min(AIC) ~ paste0('__', rsq, '__'), 
+      T ~ as.character(rsq)
+    ),
+    frm = case_when(
+      AIC == min(AIC) ~ paste0('__', frm, '__'), 
+      T ~ as.character(frm)
+    ),
+    df = case_when(
+      AIC == min(AIC) ~ paste0('__', df, '__'), 
+      T ~ as.character(df)
+    ),
+    AIC = round(AIC, 2), 
+    AIC = case_when(
+      AIC == min(AIC) ~ paste0('__', AIC, '__'), 
+      T ~ as.character(AIC)
+    )
+  ) %>% 
+  select(Model = frm, `Degrees of freedom` = df, `Adj. R-squared` = rsq, AIC)
+
+# anova(mod14, mod11)
+# submod <- step(mod1)
+
+cap.val <- 'Model comparison of pteropod length against all combinations of environmental predictor variables.  All combinations are compared with Akaike Information Criterion (AIC) and the model with the lowest AIC (in bold) is considered the most parsimonious.  Models include data from all stations and sample dates. len: length, ara: minimum $\\omega$ saturation state, oxy: dissolved oxygen, sal: salinity, temp: temperature.'
+knitr::kable(tab, caption = cap.val)
 ```
 
 *Table \@ref(tab:cumstrmod): \(\#tab:cumstrmod) Linear multiple regression models testing the additive effects of minimum observed cumulative stress exposure (S, eqn. 2) and cohort year (factor) on extent of type III dissolution in pteropods.  Results for two models are shown where the first includes 2016 data and the second does not because of missing April observations (Figure 7, bottom). Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
