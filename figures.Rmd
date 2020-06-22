@@ -287,8 +287,8 @@ toplo <- read_excel('raw/WOAC_data_5-1-2018_for_Nina.xlsx', sheet = 'ALL_DATA', 
     
   )
 
-jpeg('figs/clsts.jpg', height = 3.5, width = 7, units = 'in', res = 300, family = 'serif')
-wrap_elements(toplo$disleg[[1]]) + (toplo$denplo[[1]]+ toplo$displo[[1]] + toplo$mapplo[[1]])+ plot_layout(ncol = 1, heights = c(0.05, 1))
+jpeg('figs/clsts.jpg', height = 3.7, width = 7, units = 'in', res = 300, family = 'serif')
+wrap_elements(toplo$disleg[[1]]) + (toplo$denplo[[1]]+ toplo$displo[[1]] + toplo$mapplo[[1]])+ plot_layout(ncol = 1, heights = c(0.1, 1))
 dev.off()
 ```
 
@@ -371,7 +371,7 @@ grid.arrange(
 dev.off()
 ```
 
-```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, and minimum aragonite saturation state. Station depth is also included. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the same as the first plot but for the first and third principal component axes.", out.width = "90%", fig.align = 'center'}
+```{r pcafig, fig.cap = "Results of principal components analysis for environmental variables collected at each site for each sample date.  Environmental variables included temperature, salinity, dissolved oxygen, station depth, and minimum aragonite saturation state. All points are averages from a single CTD cast on a given date, except aragonite saturation state which was the minimum observed along the entire cast and depth which is fixed for each site. The left plot shows site groupings based on dominant clusters shown in Figure \\@ref(fig:clstmap), with site points sized by measured type III dissolution for pteropods collected at the same location and date.  The right plot shows the same as the first plot but for the first and third principal component axes.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/pcastat.jpg')
 ```
 
@@ -539,7 +539,7 @@ wrap_elements(pleg) +
 dev.off()
 ```
 
-```{r obsdat, fig.cap = "Observed time series for each station (rows, group number from Figure \\@ref(fig:clstmap) in parentheses) showing \\% type III dissolution of pteropods (left) and observed minimum aragonite saturation state (right).  Points at each station are connected by cohort years, i.e., July, September, April).  Missing data in some months prevented a continuous line connecting a cohort in the dissolution data (e..g, July 2014, at station 28).", out.width = "80%", fig.align = 'center'}
+```{r obsdat, fig.cap = "Observed time series for each station and subhabitat delineation (rows, group number from Figure \\@ref(fig:clstmap) in parentheses) showing % type III dissolution of pteropods (left) and observed minimum aragonite saturation state (right). Points at each station show the connectivity of different life stages. The right plot shows the selected aragonite threshold (Ωcrit =1.2) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.  Dissolution estimates represent averages across a subset of individuals collected at a location and date, whereas minimum aragonite saturation shows the lowest observed value sampled at a location and date. Cohort years with missing months in the left plot do not have connecting lines.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/obsdat.jpg')
 ```
 
@@ -682,102 +682,6 @@ toprd <- data.frame(
 toprd
 ```
 
-## Oxygen and aragonite 
-
-[download](figs/oxyint.jpg)
-```{r results = 'hide'}
-# input
-oxydat <- chmdatsum %>% 
-  filter(var %in% c('ara', 'oxy', 'araund')) %>% 
-  full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
-  select(-lon, -lat, -abu, -len) %>% 
-  gather('dissvar', 'dissval', typ1:typ3) %>% 
-  gather('chemvar', 'chemval', ave:dlt) %>% 
-  filter(dissvar %in% 'typ3') 
-
-plo1dat <- oxydat %>% 
-  filter(var %in% 'ara' & chemvar %in% 'min' | var %in% 'oxy' & chemvar %in% 'max') %>% 
-  select(-chemvar) %>% 
-  spread(var, chemval) %>% 
-  filter(mo %in% c('Jul')) 
-
-plo1mod <- lm(dissval ~ ara * oxy, data = plo1dat)
-
-# colors
-cols <- RColorBrewer::brewer.pal(9, 'RdBu')
-  
-# get data to plot
-pldat <- get_pldat(plo1mod, 'oxy', fct = 0.75, pos = 'left') 
-pl1a <- pldat[[1]]
-pl1b <- pldat[[2]]
-  
-# names for aes_string
-nms <- names(pl1a)
-p1 <- ggplot() +
-  geom_ribbon(data = pl1a, aes_string(x = nms[3], ymin = 'lo', ymax = 'hi', group = nms[4]), alpha = 0.5, fill = 'grey') +
-  geom_line(data = pl1a, aes_string(x = nms[3], y = nms[1], group = nms[4], colour = nms[4]), size = 1) + 
-  geom_text(data = pl1b, aes(x= x, y = y, label = lab), hjust = 0) +
-  theme_bw() +
-  scale_x_continuous(expression(Omega['ar, min'])) +
-  scale_y_continuous('% type III dissolution') +
-  coord_cartesian(ylim = c(-10, 90), xlim = c(0.19, 0.75)) +
-  scale_colour_gradientn(expression(paste(O[2], ' (', mu, 'mol ', kg^{-1}, ')')), colours = cols) 
-
-jpeg('figs/oxyint.jpg', family = 'serif', height = 4, width = 5.25, res = 300, units = 'in')
-p1
-dev.off()
-```
-
-```{r oxyint, fig.cap = 'Relationships of dissolved oxygen and aragonite saturation state with dissolution measures of pteropods.  The plot shows results for a linear model of dissolution against minimum observed aragonite state and maximum oxygen that includes both main and interaction effects (July only, F = 6.1, df = 3,16, R2 = 0.53, p < 0.05).  The color range depicts the minimum and maximum observed values for maximum dissolved oxygen across all stations.', fig.align = 'center', out.width = "55%"}
-knitr::include_graphics('figs/oxyint.jpg')
-```
-
-```{r}
-summary(plo1mod)
-```
-
-## Growth cohorts
-
-[download](figs/groplo.jpg)
-```{r results = 'hide'}
-
-toplo <- biodat %>% 
-  mutate(
-    cdate = ymd(paste(2015, month(date), day(date), sep = '-')),
-    cohortseasgrp = case_when(
-      yr == 2014 & cohortseas == 'winter' ~ 'winter2014',
-      yr == 2015 & cohortseas == 'winter' & mo == 'Apr' ~ 'winter2014',
-      yr == 2015 & cohortseas == 'summer' ~ 'summer2015',
-      yr == 2015 & cohortseas == 'winter' & mo == 'Sep' ~ 'winter2015',
-      yr == 2016 & cohortseas == 'winter' & mo == 'Apr' ~ 'winter2015',
-      yr == 2016 & cohortseas == 'summer' ~ 'summer2016'
-      ), 
-    cohortseas = factor(cohortseas, levels = c('summer', 'winter'), labels = c('summer', 'fall')), 
-    date = floor_date(date, unit = 'month')
-    ) %>% 
-  filter(!is.na(cohortseasgrp)) %>% 
-  rename(Cohort = cohortseas)
-
-p <- ggplot(toplo, aes(x = date, y = len)) + 
-  geom_point(aes(fill = Cohort), pch = 21, size = 3, alpha = 0.7) + 
-  geom_smooth(method = 'lm', aes(group = cohortseasgrp, colour = Cohort, fill = Cohort), show.legend = F) +
-  geom_text_repel(aes(label = station), size = 2.5) +
-  theme_bw(base_family = 'serif') + 
-  scale_x_date(date_breaks = '2 months', date_labels = '%b %Y') + 
-  ylab(expression(paste("Length (", mu, "m)"))) +
-  theme(
-    axis.title.x = element_blank(), 
-    legend.position = 'top'
-  ) 
-
-jpeg('figs/groplo.jpg', family = 'serif', height = 3, width = 7, res = 300, units = 'in')
-p
-dev.off()
-```
-```{r groplo, fig.cap = 'Growth cohorts represented as summer and fall individuals with measured lengths against time.  Growth trends within each cohort are shown with linear regression lines.  Individuals from April observations were assigned to seasonal growth cohorts using a cutoff length of 500 $\\mu$m between juveniles of the summer cohort and adults of the prior fall cohort. All individuals in July were assumed to be adults of the summer cohort (i.e., no surviving adults from the previous fall cohort). Similarly, all individuals in September were considered juveniles of the fall cohort (i.e., no surviving adults from the previous summer cohort).', fig.align = 'center', out.width = "90%"}
-knitr::include_graphics('figs/groplo.jpg')
-```
-
 ## Cumulative stress plot
 
 [download](figs/cumstr.jpg)
@@ -786,13 +690,15 @@ knitr::include_graphics('figs/groplo.jpg')
 toplo <- strdat %>% 
   rename(
     rsp = 'typ3'
-  )
+  ) %>% 
+  filter(!cohortyr %in% 2016) %>% 
+  mutate(station = gsub('\\s\\(.*\\)$', '', station))
   
 p1 <- ggplot(toplo, aes(x = mo, y = strscntwt, group = costa)) +
   geom_line(linetype = 'dotted') +
   geom_point(aes(colour = mo, group = station), pch = 15, size = 0, alpha = 0) +
-  geom_point(aes(group = station, size = rsp), pch = 15, alpha = 0, colour = 'black', position = position_jitter(width = 0.1, height = 0.1)) +
-  geom_label(aes(fill = mo, group = costa, label = station, size = rsp), colour = 'black', position = position_jitter(width = 0.1, height = 0.1), alpha = 0.6, show.legend = F) +
+  geom_point(aes(group = station), pch = 15, alpha = 0, colour = 'black', position = position_jitter(width = 0.1, height = 0.1)) +
+  geom_label(aes(fill = mo, group = costa, label = station), colour = 'black', position = position_jitter(width = 0.1, height = 0.1), alpha = 0.6, show.legend = F, size  = 3) +
   ylab('Cumulative stress magnitude') +
   facet_wrap(~cohortyr) +
   theme_bw(base_family = 'serif', base_size = 12) + 
@@ -801,20 +707,18 @@ p1 <- ggplot(toplo, aes(x = mo, y = strscntwt, group = costa)) +
     legend.position = 'top', 
     strip.background = element_blank()
   ) + 
-  scale_size('% type III dissolution') +
   guides(fill = guide_legend(title = element_blank(), override.aes = list(size = 4))) + 
   scale_colour_manual(values = colmos) + 
   scale_fill_manual(values = colmos) + 
   guides(
-    colour = guide_legend(title = '', override.aes = list(size = 4, alpha = 0.6)),
-    size = guide_legend(override.aes = list(size = seq(2, 8, length = 4), alpha = 0.6))
+    colour = guide_legend(title = '', override.aes = list(size = 4, alpha = 0.6))
     ) + 
   labs(
     subtitle = '(a) Cumulative stress over time'
   )
 
 p2 <- ggplot(toplo, aes(x = strscntwt, y = rsp)) +
-  geom_line(aes(group = costa), linetype = 'dotted') +
+  # geom_line(aes(group = costa), linetype = 'dotted') +
   geom_point(aes(colour = mo, group = station), pch = 15, size = 0, alpha = 0) +
   geom_label(aes(fill = mo, group = costa, label = station), size = 3, colour = 'black', alpha = 0.6, show.legend = F) +
   geom_smooth(method = 'lm', colour = 'black') +
@@ -836,12 +740,12 @@ p2 <- ggplot(toplo, aes(x = strscntwt, y = rsp)) +
     subtitle = '(b) Dissolution vs cumulative stress'
   )
   
-jpeg('figs/cumstr.jpg', family = 'serif', res = 300, units = 'in', height = 7.5, width = 8)
-p1 + p2 + plot_layout(ncol = 1, heights = c(1, 1))
+jpeg('figs/cumstr.jpg', family = 'serif', res = 300, units = 'in', height = 7.5, width = 6)
+p1 + guides(colour = 'none') + p2 + plot_layout(ncol = 1, heights = c(1, 1), guides = 'collect') & theme(legend.position = 'bottom')
 dev.off()
 ```
 
-```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within cohort years.  The top plot shows the progression of estimated cumulative stress from July to April throughout a cohort year for each station, with points sized by percent dissolution.  The bottom plot shows the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates within a year represent the frequency and magnitude of estimated exposure time of pteropods in a cohort when conditions were under-saturated below $\\Omega_{crit} = 1.2$.  Dotted lines connect cohorts at the same staiton over time."}
+```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within cohort years.  The top plot (a) shows the progression of estimated cumulative stress from July to April throughout a cohort year for each station.  The bottom plot (b) shows the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates within a year represent the frequency and magnitude of estimated exposure time of pteropods in a cohort when conditions were under-saturated below $\\Omega_{crit} = 1.2$.  Dotted lines connect cohorts at the same station over time in (a)."}
 knitr::include_graphics('figs/cumstr.jpg')
 ```
 

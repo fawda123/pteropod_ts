@@ -294,7 +294,7 @@ cap.val <- 'Model comparison of pteropod length against all combinations of envi
 knitr::kable(tab, caption = cap.val)
 ```
 
-*Table \@ref(tab:cumstrmod): \(\#tab:cumstrmod) Linear multiple regression models testing the additive effects of minimum observed cumulative stress exposure (S, eqn. 2) and cohort year (factor) on extent of type III dissolution in pteropods.  Results for two models are shown where the first includes 2016 data and the second does not because of missing April observations (Figure 7, bottom). Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
+*Table \@ref(tab:cumstrmod): \(\#tab:cumstrmod) Linear multiple regression models testing the additive effects of minimum observed cumulative stress exposure (St, eqn. 2) and cohort year (factor) on extent of type III dissolution in pteropods.  Results for two models are shown where the first includes 2016 data and the second does not because of missing April observations (Figure 7, bottom). Values shown are parameter estimates and standard error for the predictors (left column) in each linear model. Sample size and R-squared values for each model are shown at the bottom.*
 ```{r, results = 'asis', echo = F}
 tomod <- chmdatsum %>% 
   filter(var %in% 'ara') %>% 
