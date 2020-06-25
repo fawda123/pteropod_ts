@@ -28,6 +28,7 @@ library(viridis)
 library(colorspace)
 library(grid)
 library(ggrepel)
+library(gghalves)
 
 prj <- 4326 # wgs84
 
@@ -680,6 +681,79 @@ toprd <- data.frame(
   ) %>% 
   rename(ara = chemval)
 toprd
+```
+
+## Length plot
+
+[download](figs/lengthind.jpg)
+```{r results = 'hide'}
+
+# cluster
+clsts <- tibble(
+  station = c(402, 38, 28, 22, 12, 8, 4),
+  clst = c(3, 2, 2, 1, 3, 2, 3)
+)
+
+# raw length data
+toplo <- read_excel('raw/length data Puget SOund.xlsx') %>% 
+  select(-Whorls, -PT, -`Individual #`) %>% 
+  rename(
+    station = `P#`, 
+    yr = Year, 
+    mo = Month, 
+    len = `Length (um)`
+  ) %>% 
+  mutate(
+    station = case_when(
+      station %in% '381' ~ '38',
+      station %in% '38wrongname' ~ '38',
+      station %in% '4O2' ~ '402',
+      station %in% '28extra' ~ '28',
+      station %in% '28resample' ~ '28',
+      station %in% '28RS' ~ '28',
+      T ~ station
+    ), 
+    mo = case_when(
+      mo %in% 'May' ~ 'April',
+      mo %in% c('November', 'October') ~ 'September',
+      T ~ mo
+    )
+  ) %>% 
+  filter(!station %in% 'RS') %>% 
+  mutate(
+    mo = factor(mo, levels = c('July', 'September', 'April'), labels = c('Jul', 'Sep', 'Apr'), ordered = T),
+    cohortyr = ifelse(mo %in% 'Apr', yr - 1, yr),
+    dy = 1,
+    station = as.numeric(station)
+  ) %>% 
+  unite('date', yr, mo, dy, remove = F, sep = '-') %>% 
+  mutate(date = ymd(date)) %>% 
+  dplyr::select(date, yr, cohortyr, mo, station, len) %>% 
+  right_join(clsts, by = 'station')
+
+p <- ggplot(toplo, aes(x = date, y = len, group = date)) + 
+  geom_half_violin() +
+  geom_half_point_panel(aes(fill = factor(clst)), color = 'black', pch = 21, 
+                        transformation = position_jitter(width = 50, height = 0.1), alpha = 0.9) + 
+  scale_fill_viridis_d('Site clusters') + 
+  scale_x_date(date_breaks = '2 months', date_labels = '%b %Y') + 
+  theme_bw(base_family = 'serif', base_size = 14) + 
+  theme(
+    legend.position = 'top', 
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(size = 8)
+    ) + 
+  labs(
+    y = 'Length (um)'
+  )
+
+jpeg('figs/lengthind.jpg', family = 'serif', res = 300, units = 'in', height = 4, width = 9)
+p
+dev.off()
+```
+
+```{r lengthind, out.width = "100%", fig.align = 'center', fig.cap = "Length of individuals measured at each station across the period of record.  The left half of values at each date show a density histogram and the right half shows observations.  Points are colored by station clusters in Figure \\@fig(fig:clstmap) and represent sub-habitat types as described in the results section."}
+knitr::include_graphics('figs/lengthind.jpg')
 ```
 
 ## Cumulative stress plot
