@@ -760,3 +760,85 @@ strmods
 strmods$mod
 ```
 
+## Supplement
+
+[download temp](figs/profiletemp.jpg)
+[download chla](figs/profilechla.jpg)
+[download oxy](figs/profileoxy.jpg)
+[download sal](figs/profilesal.jpg)
+[download ara](figs/profileara.jpg)
+```{r results = 'hide'}
+# date levels, labels
+dtlev <- as.character(sort(unique(chmdatraw$date)))
+dtlab <- as.character(format(unique(chmdatraw$date), '%Y-%m'))
+
+# chemistry raw data
+toplo <- chmdatraw %>% 
+  filter(var %in% c('temp', 'chla', 'oxy', 'sal', 'ara')) %>% 
+  mutate(
+    date = factor(date, levels = dtlev, labels = dtlab)
+  ) %>% 
+  group_by(date, mo, station, depth, var) %>% 
+  summarise(val = mean(val, na.rm = T)) %>% 
+  ungroup %>% 
+  filter(!is.na(station)) %>% 
+  group_by(var) %>% 
+  nest() %>% 
+  mutate(
+    labs = case_when(
+      var == 'oxy' ~ 'Dissolved oxygen (mg/L)', 
+      var == 'temp' ~ 'Temperature (C)',
+      var == 'chla' ~ 'Chlorophyll-a (ug/L)',
+      var == 'sal' ~ 'Salinity (psu)', 
+      var == 'ara' ~ 'Aragonite saturation'
+    ),
+    plos = purrr::pmap(list(labs, data), function(labs, data){
+      
+      p <- ggplot(data, aes(x = val, y = -depth)) +
+        geom_path() + 
+        geom_point(aes(fill = mo), pch = 21, colour = 'black', size = 4) + 
+        ylab('Depth') +
+        xlab(labs) + 
+        scale_fill_viridis_d() +
+        theme_bw(base_family = 'serif', base_size = 14) +
+        theme(
+          strip.background = element_blank(), 
+          legend.title = element_blank(),
+          # axis.text.x  = element_text(size = 10, angle = 45, hjust = 1),
+          legend.position = 'top'
+          ) + 
+        facet_grid(station~date, scales = 'free_y')
+      
+      return(p)
+      
+    })
+  )
+
+jpeg('figs/profileara.jpg', family = 'serif', res = 300, units = 'in', height = 12, width = 11)
+toplo %>% filter(var == 'ara') %>% pull(plos)
+dev.off()
+
+jpeg('figs/profilechla.jpg', family = 'serif', res = 300, units = 'in', height = 12, width = 11)
+toplo %>% filter(var == 'chla') %>% pull(plos)
+dev.off()
+
+jpeg('figs/profileoxy.jpg', family = 'serif', res = 300, units = 'in', height = 12, width = 11)
+toplo %>% filter(var == 'oxy') %>% pull(plos)
+dev.off()
+
+jpeg('figs/profiletemp.jpg', family = 'serif', res = 300, units = 'in', height = 12, width = 11)
+toplo %>% filter(var == 'temp') %>% pull(plos)
+dev.off()
+
+jpeg('figs/profilesal.jpg', family = 'serif', res = 300, units = 'in', height = 12, width = 11)
+toplo %>% filter(var == 'sal') %>% pull(plos)
+dev.off()
+```
+
+```{r profile, out.width = "70%", fig.align = 'center', fig.cap = "Vertical profiles of aragonite saturation state, chlorophyll-a (ug/L), dissolved oxygen (mg/L), temperature (C), and salinity (psu)"}
+knitr::include_graphics('figs/profileara.jpg')
+knitr::include_graphics('figs/profilechla.jpg')
+knitr::include_graphics('figs/profileoxy.jpg')
+knitr::include_graphics('figs/profiletemp.jpg')
+knitr::include_graphics('figs/profilesal.jpg')
+```
