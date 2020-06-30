@@ -1038,7 +1038,7 @@ renderPlot({
 renderPrint({lapply(gromod_apr()['allchm'], summary)})
 ```
 
-#### Response vs two variables
+#### Response vs two variables, Jul only
 
 ```{r}
 column(12, 
@@ -1078,6 +1078,7 @@ mod3dat <- reactive({
   
   dat <- chmdatsum %>% 
     filter(var %in% c(chm, chm3)) %>% 
+    filter(mo %in% 'Jul') %>% 
     full_join(biodat, by = c('station', 'date', 'yr', 'cohortyr', 'mo')) %>% 
     select(-lon, -lat, -abu) %>% 
     gather('chemvar', 'chemval', ave:dlt) %>% 
