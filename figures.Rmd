@@ -405,11 +405,8 @@ toplo <- chmdatraw %>%
   na.omit %>% 
   group_by(date, station) %>% 
   mutate(
-    minval = val == min(val)#, 
-    # minval = case_when(
-    #   minval ~ 1, 
-    #   !minval ~ 0.7
-    # )
+    minval = val == min(val),
+    clst = factor(clst, levels = c('1', '2', '3'), labels = c('1 (mild)', '2 (moderate)', '3 (severe)'))
   ) %>% 
   ungroup
 
@@ -438,7 +435,7 @@ p
 dev.off()
 ```
 
-```{r ctdplo, fig.cap = "Depth profiles of aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap) and represent sub-habitat types as described in the results section.  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted). Points in red show the minimum observed value for a CTD profile on a given date and station.", out.width = "80%", fig.align = 'center'}
+```{r ctdplo, fig.cap = "Depth profiles of aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap) based on exposure categories and represent sub-habitat types as described in the results section.  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted). Points in red show the minimum observed value for a CTD profile on a given date and station.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/ctdplo.jpg')
 ```
 
@@ -731,13 +728,16 @@ toplo <- read_excel('raw/length data Puget SOund.xlsx') %>%
   unite('date', yr, mo, dy, remove = F, sep = '-') %>% 
   mutate(date = ymd(date)) %>% 
   dplyr::select(date, yr, cohortyr, mo, station, len) %>% 
-  right_join(clsts, by = 'station')
+  right_join(clsts, by = 'station') %>% 
+  mutate(
+    clst = factor(clst, levels = c('1', '2', '3'), labels = c('1 (mild)', '2 (moderate)', '3 (severe)'))
+  )
 
 p <- ggplot(toplo, aes(x = date, y = len, group = date)) + 
   geom_half_violin() +
   geom_half_point_panel(aes(fill = factor(clst)), color = 'black', pch = 21, 
                         transformation = position_jitter(width = 50, height = 0.1), alpha = 0.9) + 
-  scale_fill_viridis_d('Site clusters') + 
+  scale_fill_viridis_d('Site clusters (exposure category)') + 
   scale_x_date(date_breaks = '1 months', date_labels = '%b %Y', limits = as.Date(c('2014-06-01', '2016-10-15')), expand = c(0, 0)) + 
   theme_bw(base_family = 'serif', base_size = 16) + 
   theme(
@@ -746,7 +746,7 @@ p <- ggplot(toplo, aes(x = date, y = len, group = date)) +
     axis.text.x = element_text(size = 11, angle = 45, hjust = 1)
     ) + 
   labs(
-    y = 'Length (um)'
+    y = expression("Length"~(mu~"m"))
   )
 
 jpeg('figs/lengthind.jpg', family = 'serif', res = 300, units = 'in', height = 4, width = 9)
