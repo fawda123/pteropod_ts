@@ -333,6 +333,9 @@ chmsub <- chmdatsum %>%
 tomod <- chmsub %>% 
   left_join(biosub, by = c('cohortyr', 'mo', 'station')) %>% 
   left_join(clsts, by = 'station') %>% 
+  mutate(
+    clst = factor(clst, levels = c('1', '2', '3'), labels = c('1 (mild)', '2 (moderate)', '3 (severe)'))
+  ) %>% 
   left_join(depth_dat, by = 'station') %>% 
   unite('stat_mo', station, mo, sep = ', ', remove = F) %>% 
   unite(stat_moyr, stat_mo, cohortyr, sep = ' ', remove = F) %>% 
