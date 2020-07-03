@@ -228,12 +228,14 @@ knitr::kable(tab, caption = cap.val)
 
 ```{r lenaic, echo = F}
 
+chmvr <- c('ara', 'temp', 'oxy', 'sal', 'chla')
+
 # combine data for pca
 biosub <- biodat %>% 
   select(cohortyr, mo, station, len)
 
 chmsub <- chmdatsum %>% 
-  filter(var %in% c('ara', 'temp', 'oxy', 'sal')) %>%
+  filter(var %in% !!chmvr) %>%
   select(-date, -yr, -lon, -lat, -max, -std, -rng, -dlt) %>% 
   gather('valtyp', 'val', ave, min) %>% 
   filter(var %in% 'ara' & valtyp %in% 'min' | !var %in% 'ara' & valtyp %in% 'ave') %>% 
@@ -243,30 +245,50 @@ chmsub <- chmdatsum %>%
 tomod <- chmsub %>% 
   left_join(biosub, by = c('cohortyr', 'mo', 'station'))
 
-mod1 <- lm(len ~ ara + oxy + sal + temp, tomod)
-mod2 <- lm(len ~ ara + oxy + sal, tomod)
-mod3 <- lm(len ~ ara + oxy + temp, tomod)
-mod4 <- lm(len ~ ara + sal + temp, tomod)
-mod5 <- lm(len ~ oxy + sal + temp, tomod)
-mod6 <- lm(len ~ ara + temp, tomod)
-mod7 <- lm(len ~ ara + sal, tomod)
-mod8 <- lm(len ~ ara + oxy, tomod)
-mod9 <- lm(len ~ oxy + sal, tomod)
-mod10 <- lm(len ~ oxy + temp, tomod)
-mod11 <- lm(len ~ sal + temp, tomod)
-mod12 <- lm(len ~ ara, tomod)
-mod13 <- lm(len ~ sal, tomod)
-mod14 <- lm(len ~ temp, tomod)
-mod15 <- lm(len ~ oxy, tomod)
-
-tab <- AIC(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15)
-tab <- tab %>% 
+tab <- tibble(
+  cmb = seq(length(chmvr), 1),
+  ) %>% 
+  group_by(cmb) %>% 
   mutate(
-    frm = lapply(list(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15), formula) %>% unlist, 
-    rsq = lapply(list(mod1, mod2, mod3, mod4, mod5, mod6, mod7, mod8, mod9, mod10, mod11, mod12, mod13, mod14, mod15), function(x){
-      pmax(0, summary(x)$adj.r.squared) %>% round(2)
-      }
-    ),
+    mod = purrr::map(cmb, function(cmb){
+      
+      vrs <- combn(chmvr, cmb) %>% 
+        t %>% 
+        as_tibble %>%
+        unite('frm', sep = ' + ') %>% 
+        mutate( 
+          frm = paste('len', frm, sep = ' ~ ')
+        )
+      
+      return(vrs)
+      
+    })
+  ) %>%
+  unnest(mod) %>% 
+  ungroup %>% 
+  select(-cmb) %>% 
+  group_by(frm) %>% 
+  nest %>% 
+  mutate(
+    data = purrr::map(frm, function(frm){
+      
+      mod <- frm %>% 
+        as.formula %>% 
+        lm(data = tomod)
+      
+      df <- summary(mod)$df[3] + 1
+      r2 <- pmax(0, summary(mod)$adj.r.squared) %>% round(2)
+      aic <- AIC(mod)
+      
+      out <- data.frame(df = df, rsq = r2, AIC = aic)
+      
+      return(out)
+
+    })
+  ) %>% 
+  unnest(data) %>% 
+  ungroup %>% 
+  mutate(
     rsq = case_when(
       AIC == min(AIC) ~ paste0('__', rsq, '__'), 
       T ~ as.character(rsq)
@@ -290,7 +312,7 @@ tab <- tab %>%
 # anova(mod14, mod11)
 # submod <- step(mod1)
 
-cap.val <- 'Model comparison of pteropod length against all combinations of environmental predictor variables.  All combinations are compared with Akaike Information Criterion (AIC) and the model with the lowest AIC (in bold) is considered the most parsimonious.  Models include data from all stations and sample dates. len: length, ara: minimum $\\omega$ saturation state, oxy: dissolved oxygen, sal: salinity, temp: temperature.'
+cap.val <- 'Model comparison of pteropod length against all combinations of environmental predictor variables.  All combinations are compared with Akaike Information Criterion (AIC) and the model with the lowest AIC (in bold) is considered the most parsimonious.  Models include data from all stations and sample dates. len: length, ara: minimum $\\omega$ saturation state, oxy: dissolved oxygen, sal: salinity, temp: temperature, chla; chlorophyll-a.'
 knitr::kable(tab, caption = cap.val)
 ```
 
