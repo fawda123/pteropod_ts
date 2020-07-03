@@ -420,7 +420,7 @@ p <- ggplot(toplo, aes(fill = factor(clst), x = val, y = depth)) +
   scale_y_reverse() + 
   scale_x_continuous(breaks = seq(0, 5, by = 0.5)) + 
   ylab('Depth (m)') +
-  xlab(expression(Omega['ar,min'])) + 
+  xlab(expression(Omega['ar'])) + 
   facet_grid(clst~mo) + 
   theme_bw(base_family = 'serif', base_size = 14) +
   theme(
@@ -436,7 +436,7 @@ p
 dev.off()
 ```
 
-```{r ctdplo, fig.cap = "Depth profiles of minimum aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap) and represent sub-habitat types as described in the results section.  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted). ", out.width = "80%", fig.align = 'center'}
+```{r ctdplo, fig.cap = "Depth profiles of aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap) and represent sub-habitat types as described in the results section.  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted). ", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/ctdplo.jpg')
 ```
 
