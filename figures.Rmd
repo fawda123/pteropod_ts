@@ -401,19 +401,21 @@ toplo <- chmdatraw %>%
   ungroup %>% 
   mutate(
     date = factor(date, levels = dtlev, labels = dtlab),
-    alph = case_when(
-      val > 1.2 ~ 0.3, 
-      val > 1 & val <= 1.2 ~ 0.3,
-      val <= 1 ~ 1
-    )
-  ) %>%
-  na.omit 
+  ) %>% 
+  na.omit %>% 
+  group_by(date, station) %>% 
+  mutate(
+    minval = val == min(val)#, 
+    # minval = case_when(
+    #   minval ~ 1, 
+    #   !minval ~ 0.7
+    # )
+  ) %>% 
+  ungroup
 
 p <- ggplot(toplo, aes(fill = factor(clst), x = val, y = depth)) +
-  geom_point(pch = 21, colour = 'black', size = 3) +
-  # geom_smooth(method="nls", 
-  #             formula = y ~ SSasymp(x, yf, y0, log_alpha),
-  #             se=FALSE) +
+  geom_point(pch = 21, colour = 'black', size = 3, alpha = 0.8) +
+  geom_point(data = toplo[toplo$minval, ], colour = 'red') + 
   scale_fill_manual(values = rev(colmst)) + 
   geom_vline(linetype = 'dashed', aes(xintercept = 1), size = 1) + 
   geom_vline(linetype = 'dotted', aes(xintercept = 1.2), size = 1) + 
@@ -436,7 +438,7 @@ p
 dev.off()
 ```
 
-```{r ctdplo, fig.cap = "Depth profiles of aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap) and represent sub-habitat types as described in the results section.  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted). ", out.width = "80%", fig.align = 'center'}
+```{r ctdplo, fig.cap = "Depth profiles of aragonite saturation state across seasons and stations.  Stations are grouped by clusters in Figure \\@fig(fig:clstmap) and represent sub-habitat types as described in the results section.  Vertical lines indicate minimum saturation state of 1 (dashed) and 1.2 (dotted). Points in red show the minimum observed value for a CTD profile on a given date and station.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/ctdplo.jpg')
 ```
 
