@@ -116,22 +116,29 @@ totab <- chmdatraw %>%
   group_by(station, var) %>% 
   summarise(
     depth = round(max(depth, na.rm = T), 0),
-    ave = round(mean(val, na.rm = T), 1),
-    min = round(min(val, na.rm = T), 1),
+    ave = case_when(
+      var == 'oxy' ~ round(mean(val, na.rm = T), 0), 
+      T ~ round(mean(val, na.rm = T), 1)
+      ),
+    min = case_when(
+      var == 'oxy' ~ round(min(val, na.rm = T), 0), 
+      T ~ round(min(val, na.rm = T), 1)
+      ),
     min = paste0('(', min, ','),
-    max = round(max(val, na.rm = T), 1),
+    max = case_when(
+      var == 'oxy' ~ round(max(val, na.rm = T), 0), 
+      T ~ round(max(val, na.rm = T), 1)
+      ),
     max = paste0(max, ')'), 
-    lon = round(mean(lon, na.rm = T), 1), 
-    lon = paste0(lon, '/'),
-    lat = round(mean(lat, na.rm = T), 1)
+    .groups = 'drop'
   ) %>% 
   filter(var %in% c('ara', 'sal', 'chla', 'temp', 'oxy')) %>% 
+  unique %>% 
   unite('est', ave, min, max, sep = ' ') %>% 
-  unite('loc', lon, lat, sep = '') %>% 
   spread(var, est) %>% 
   ungroup %>% 
   left_join(groups, by = 'station') %>% 
-  dplyr::select(group, station, loc, depth, ara, sal, chla, temp, oxy) %>% 
+  dplyr::select(group, station, depth, ara, sal, chla, temp, oxy) %>% 
   mutate(
     station = factor(station, levels = c(22, 8, 28, 38, 4, 12, 402))
   ) %>% 
@@ -140,14 +147,13 @@ totab <- chmdatraw %>%
     group = ifelse(duplicated(group), '', group)
   ) %>% 
   rename(
-    Station = station, 
-    `lon/lat` = loc, 
+    Station = station,
     `Depth (m)` = depth, 
     `Aragonite saturation ($\\Omega$)` = ara,
     `Salinity (psu)` = sal, 
     `Chlorophyll-a ($\\mu$g/L)` = chla, 
     `Temperature (C)` = temp, 
-    `Dissolved Oxygen (mg/L)` = oxy
+    `Dissolved Oxy (umol/kg)` = oxy
   )
   
  names(totab)[1] <- ''
@@ -358,18 +364,20 @@ huxres <- export_summs(modyrs, modyrsno2016, model.names = c('By year', 'By year
 
 brd <- fp_border(color="black")
 
-# use flextable
-tab <- huxres %>%
-  as_FlexTable %>%
-  font(fontname = 'Times', part = 'all') %>%
-  fontsize(size = 12, part = 'all') %>%
-  border_remove %>%
-  autofit(add_h = 0) %>%
-  hline_top(part = 'all', border = brd) %>%
-  hline(i = 1, part = 'body', border = brd) %>%
-  hline(i= 9, part = 'body', border = brd) %>%
-  hline(i= 11, part = 'body', border = brd)
-tab
+# # use flextable
+# tab <- huxres %>%
+#   flextable %>%
+#   colformat_num(digits = 2) %>% 
+#   font(fontname = 'Times', part = 'all') %>%
+#   fontsize(size = 12, part = 'all') %>%
+#   border_remove %>%
+#   autofit(add_h = 0) %>%
+#   hline_top(part = 'all', border = brd) %>%
+#   hline(i = 1, part = 'body', border = brd) %>%
+#   hline(i= 9, part = 'body', border = brd) %>%
+#   hline(i= 11, part = 'body', border = brd)
+# tab
+huxres
 ```
 
 
