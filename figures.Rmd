@@ -679,8 +679,8 @@ p2 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
     axis.title = element_blank(), 
     strip.text.x = element_text(hjust = 0)
   ) + 
-  scale_fill_manual('Within years, across months', values = colmos) + 
-  scale_colour_manual('Within years, across months', values = colmos) + 
+  scale_fill_manual('Within generation-years, across months', values = colmos) + 
+  scale_colour_manual('Within generation-years, across months', values = colmos) + 
   guides(colour = guide_legend(override.aes = list(size = 4, alpha = 0.6)))
 
 jpeg('figs/disvara.jpg', height = 7, width = 7.5, units = 'in', res = 300, family = 'serif')
