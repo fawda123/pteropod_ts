@@ -600,7 +600,7 @@ wrap_elements(pleg) +
 dev.off()
 ```
 
-```{r obsdat, fig.cap = "Observed time series for each station and subhabitat delineation (rows, group number from Figure \\@ref(fig:clstmap) in parentheses) showing % type III dissolution of pteropods (a) and observed minimum aragonite saturation state (b). Points at each station show the connectivity of different generation years, defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation year is July, September 2015 and April 2016 calendar years). The right plot shows the selected aragonite threshold (Ωcrit =1.2) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.  Dissolution estimates represent averages across a subset of individuals collected at a location and date, whereas minimum aragonite saturation shows the lowest observed value sampled at a location and date. Generation years with missing months in the left plot do not have connecting lines.", out.width = "80%", fig.align = 'center'}
+```{r obsdat, fig.cap = "Observed time series for each station and subhabitat delineation (rows, group number from Figure \\@ref(fig:clstmap) in parentheses) showing % type III dissolution of pteropods (a) and observed minimum aragonite saturation state (b). Points at each station show the connectivity of different generation-years, defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation-year is July, September 2015 and April 2016 calendar years). The right plot shows the selected aragonite threshold (Ωcrit =1.2) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.  Dissolution estimates represent averages across a subset of individuals collected at a location and date, whereas minimum aragonite saturation shows the lowest observed value sampled at a location and date. Generation-years with missing months in the left plot do not have connecting lines.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/obsdat.jpg')
 ```
 
@@ -660,8 +660,8 @@ p1 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
     axis.title = element_blank(), 
     strip.text.x = element_text(hjust = 0)
   ) + 
-  scale_fill_manual('Within months, across generation years', values = colmos) + 
-  scale_colour_manual('Within months, across generation years', values = colmos) + 
+  scale_fill_manual('Within months, across generation-years', values = colmos) + 
+  scale_colour_manual('Within months, across generation-years', values = colmos) + 
   guides(colour = guide_legend(override.aes = list(size = 4, alpha = 0.6)))
 
 p2 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
@@ -688,7 +688,7 @@ wrap_elements(textGrob('           % type III dissolution', rot = 90)) + (p1 + p
 dev.off()
 ```
 
-```{r disvara, fig.cap = "Percent type III dissolution measured in pteropods versus minimum observed aragonite saturation state for each station.  The top row (a-c) shows stations grouped by month across generation years and the bottom row (d-f) shows stations grouped by generation years across months.  Generation years are defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation year is July, September 2015 and April 2016 calendar years). Linear regression lines with 95\\% confidence intervals in dark grey are shown in each panel.  The confidence intervals reflect uncertainty in the regression fit (slope and intercept) describing the association between dissolution and aragonite saturation.", out.width = "80%", fig.align = 'center'}
+```{r disvara, fig.cap = "Percent type III dissolution measured in pteropods versus minimum observed aragonite saturation state for each station.  The top row (a-c) shows stations grouped by month across generation-years and the bottom row (d-f) shows stations grouped by generation-years across months.  Generation-years are defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation-year is July, September 2015 and April 2016 calendar years). Linear regression lines with 95\\% confidence intervals in dark grey are shown in each panel.  The confidence intervals reflect uncertainty in the regression fit (slope and intercept) describing the association between dissolution and aragonite saturation.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/disvara.jpg')
 ```
 
@@ -942,7 +942,7 @@ p1 + guides(colour = 'none') + p2 + plot_layout(ncol = 1, heights = c(1, 1), gui
 dev.off()
 ```
 
-```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within generation years.  The top plots (a, b) show the progression of estimated cumulative stress from July to April throughout a generation year for each station.  Generation years are defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation year is July, September 2015 and April 2016 calendar years). The bottom plots (c, d) show the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates represent the frequency and magnitude of estimated exposure time of pteropods in a generation year when conditions were under-saturated below $\\Omega_{crit} = 1.2$.  Dotted lines in (a) and (b) connect stations across months to emphasize trends in cumulative stress.  Shaded regions in subplots (c) and (d) show the 95\\% confidence intervals for the solid regression lines. The confidence intervals reflect uncertainty in the regression fit (slope and intercept) describing the association between dissolution and cumulative stress."}
+```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within generation-years.  The top plots (a, b) show the progression of estimated cumulative stress from July to April throughout a generation-year for each station.  Generation-years are defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation-year is July, September 2015 and April 2016 calendar years). The bottom plots (c, d) show the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates represent the frequency and magnitude of estimated exposure time of pteropods in a generation-year when conditions were under-saturated below $\\Omega_{crit} = 1.2$.  Dotted lines in (a) and (b) connect stations across months to emphasize trends in cumulative stress.  Shaded regions in subplots (c) and (d) show the 95\\% confidence intervals for the solid regression lines. The confidence intervals reflect uncertainty in the regression fit (slope and intercept) describing the association between dissolution and cumulative stress."}
 knitr::include_graphics('figs/cumstr.jpg')
 ```
 
