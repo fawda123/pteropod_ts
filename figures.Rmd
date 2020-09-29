@@ -85,35 +85,69 @@ colmos <- diverging_hcl(3, 'Blue-Red')
 # make cohortyr an ordered factor
 toplo <- biodat %>% 
   mutate(cohortyr = factor(cohortyr, ordered = T)) %>% 
-  select(mo, station, yr,typ3, len) %>% 
-  gather('var', 'val', typ3, len) %>% 
-  mutate(
-    var = factor(var, levels = c('len', 'typ3'), labels = c('length (um)', '% type III dissolution'))
-  )
+  select(mo, station, yr,  typ3)
 
-p <- ggplot(toplo, aes(x = mo, y = val, fill = )) + 
+p <- ggplot(toplo, aes(x = mo, y = typ3)) + 
   geom_boxplot(aes(fill = mo), outlier.shape = NA, alpha = 0.4) + 
   geom_label(aes(fill = mo, label = station), size = 4, alpha = 0.6, position = position_jitter(width = 0.3), 
              label.padding = unit(0.1, "lines")) +
-  facet_wrap(~var, ncol = 2, scales = 'free_y', strip.position = 'left') + 
   scale_fill_manual(values = colmos) + 
-  # scale_colour_manual(values = colmos) + 
   theme_bw(base_family = 'serif', base_size = 14) +
   theme(
-    strip.placement = 'outside', 
-    axis.title = element_blank(), 
-    strip.background = element_blank(), 
-    legend.position = 'none'
+    legend.position = 'none', 
+    axis.title.x = element_blank()
+  ) + 
+  labs(
+    y = '% type III dissolution'
   )
 
-
-jpeg('figs/biodst.jpg', height = 5, width = 8, units = 'in', res = 300, family = 'serif')
+jpeg('figs/biodst.jpg', height = 5, width = 6, units = 'in', res = 300, family = 'serif')
 print(p)
 dev.off()
 ```
 
-```{r biodst, fig.cap = "Pteropod distributions by length (left) and dissolution (right) across sites and months.  Site numbers are shown in each point. Box plots represent the median values with the upper and lower limits of the boxes defined as the 25th and 75th percentile of the distributions.  The whiskers are 1.5 times the interquartile range.", out.width = "70%", fig.align = 'center'}
+```{r biodst, fig.cap = "Pteropod dissolution measurements across sites and months.  Site numbers are shown in each point. Box plots represent the median values with the upper and lower limits of the boxes defined as the 25th and 75th percentile of the distributions.  The whiskers are 1.5 times the interquartile range.", out.width = "50%", fig.align = 'center'}
 knitr::include_graphics('figs/biodst.jpg')
+```
+
+Number summaries by month: 
+
+```{r}
+qnts <- toplo %>% 
+  select(mo, typ3) %>% 
+  group_by(mo) %>%
+  summarise(
+    out = list(enframe(c(summary(typ3)))),
+    .groups = 'drop'
+  ) %>% 
+  unnest('out') %>% 
+  spread(name, value)
+qnts
+```
+
+Pairwise comparisons of months (one-side test evaluating if earlier month has less dissolution):
+
+```{r}
+toplo$mo %>% 
+  unique %>% 
+  as.character %>% 
+  combn(2) %>% 
+  t %>% 
+  data.frame %>%
+  group_by(X1, X2) %>% 
+  nest %>% 
+  mutate(
+    data = purrr::pmap(list(X1, X2), function(X1, X2){
+      
+      val1 <- filter(toplo, mo %in% X1) %>% pull(typ3)
+      val2 <- filter(toplo, mo %in% X2) %>% pull(typ3)
+      
+      t.test(val1, val2, alternative = 'less')
+      
+    })
+  ) %>% 
+  unite('mo', X1, X2) %>% 
+  deframe
 ```
 
 ## Cluster analyses
@@ -566,7 +600,7 @@ wrap_elements(pleg) +
 dev.off()
 ```
 
-```{r obsdat, fig.cap = "Observed time series for each station and subhabitat delineation (rows, group number from Figure \\@ref(fig:clstmap) in parentheses) showing % type III dissolution of pteropods (a) and observed minimum aragonite saturation state (b). Points at each station show the connectivity of different life stages. The right plot shows the selected aragonite threshold (Ωcrit =1.2) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.  Dissolution estimates represent averages across a subset of individuals collected at a location and date, whereas minimum aragonite saturation shows the lowest observed value sampled at a location and date. Cohort years with missing months in the left plot do not have connecting lines.", out.width = "80%", fig.align = 'center'}
+```{r obsdat, fig.cap = "Observed time series for each station and subhabitat delineation (rows, group number from Figure \\@ref(fig:clstmap) in parentheses) showing % type III dissolution of pteropods (a) and observed minimum aragonite saturation state (b). Points at each station show the connectivity of different generation years, defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation year is July, September 2015 and April 2016 calendar years). The right plot shows the selected aragonite threshold (Ωcrit =1.2) as a horizontal line with the difference between the threshold and minimum observed value shown as a dotted line.  Dissolution estimates represent averages across a subset of individuals collected at a location and date, whereas minimum aragonite saturation shows the lowest observed value sampled at a location and date. Generation years with missing months in the left plot do not have connecting lines.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/obsdat.jpg')
 ```
 
@@ -614,7 +648,7 @@ toplo <- chmdatsum %>%
 
 p1 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
   # geom_line(aes(group = station), colour = 'grey') +
-  geom_ribbon(aes(ymin = lwrmo, ymax = uprmo), fill = 'grey', alpha = 0.3) + 
+  # geom_ribbon(aes(ymin = lwrmo, ymax = uprmo), fill = 'grey', alpha = 0.3) + 
   stat_smooth(method = 'lm', se = T, colour = 'black') +
   geom_point(aes(colour = factor(cohortyr), group = station), pch = 15, size = 0, alpha = 0) +
   geom_label(aes(fill = factor(cohortyr), group = station, label = station), colour = 'black', size = 3, alpha = 0.6, show.legend = F) +
@@ -626,14 +660,14 @@ p1 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
     axis.title = element_blank(), 
     strip.text.x = element_text(hjust = 0)
   ) + 
-  scale_fill_manual('Within months, across years', values = colmos) + 
-  scale_colour_manual('Within months, across years', values = colmos) + 
+  scale_fill_manual('Within months, across generation years', values = colmos) + 
+  scale_colour_manual('Within months, across generation years', values = colmos) + 
   guides(colour = guide_legend(override.aes = list(size = 4, alpha = 0.6)))
 
 p2 <- ggplot(toplo, aes(x = chemval, y = dissval)) +
   # geom_line(aes(group = station), colour = 'grey') +
   stat_smooth(method = 'lm', se = T, colour = 'black') +
-  geom_ribbon(aes(ymin = lwryr, ymax = upryr), fill = 'grey', alpha = 0.3) + 
+  # geom_ribbon(aes(ymin = lwryr, ymax = upryr), fill = 'grey', alpha = 0.3) + 
   stat_smooth(method = 'lm', se = T, colour = 'black') +
   geom_point(aes(colour = factor(mo), group = station), pch = 15, size = 0, alpha = 0) +
   geom_label(aes(fill = factor(mo), group = station, label = station), colour = 'black', size = 3, alpha = 0.6, show.legend = F) +
@@ -654,7 +688,7 @@ wrap_elements(textGrob('           % type III dissolution', rot = 90)) + (p1 + p
 dev.off()
 ```
 
-```{r disvara, fig.cap = "Percent type III dissolution measured in pteropods versus minimum observed aragonite saturation state for each station.  The top row (a-c) shows stations grouped by month across cohort years and the bottom row (d-f) shows stations grouped by cohort years across months.  Linear regression lines with 95\\% confidence intervals in dark grey and 95\\% prediction intervals in light grey are shown in each panel.", out.width = "80%", fig.align = 'center'}
+```{r disvara, fig.cap = "Percent type III dissolution measured in pteropods versus minimum observed aragonite saturation state for each station.  The top row (a-c) shows stations grouped by month across generation years and the bottom row (d-f) shows stations grouped by generation years across months.  Generation years are defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation year is July, September 2015 and April 2016 calendar years). Linear regression lines with 95\\% confidence intervals in dark grey are shown in each panel.  The confidence intervals reflect uncertainty in the regression fit (slope and intercept) describing the association between dissolution and aragonite saturation.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/disvara.jpg')
 ```
 
@@ -663,6 +697,19 @@ Linear model by years.
 modyrs <- lm(dissval ~ chemval * factor(cohortyr), data = toplo)#$toplo[!toplo$cohortyr %in% '2016', ])
 summary(modyrs)
 ```
+
+Linear models separate by years. 
+
+```{r}
+toplo %>% 
+  group_by(cohortyr) %>% 
+  summarise(
+    mods = list(summary(lm(dissval ~ chemval)))
+  ) %>% 
+  filter(cohortyr != 2016) %>% 
+  deframe
+```
+
 
 Linear model by months.
 ```{r}
@@ -867,7 +914,7 @@ p1 <- ggplot(toplo, aes(x = mo, y = strscntwt, group = costa)) +
 
 p2 <- ggplot(toplo, aes(x = strscntwt, y = rsp)) +
   # geom_line(aes(group = costa), linetype = 'dotted') +
-  geom_ribbon(aes(ymin = lwr, ymax = upr), fill = 'grey', alpha = 0.3) + 
+  # geom_ribbon(aes(ymin = lwr, ymax = upr), fill = 'grey', alpha = 0.3) + 
   geom_smooth(method = 'lm', colour = 'black') +
   geom_point(aes(colour = mo, group = station), pch = 15, size = 0, alpha = 0) +
   geom_label(aes(fill = mo, group = costa, label = station), size = 3, colour = 'black', alpha = 0.6, show.legend = F) +
@@ -895,7 +942,7 @@ p1 + guides(colour = 'none') + p2 + plot_layout(ncol = 1, heights = c(1, 1), gui
 dev.off()
 ```
 
-```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within cohort years.  The top plots (a, b) show the progression of estimated cumulative stress from July to April throughout a cohort year for each station.  The bottom plots (c, d) show the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates within a year represent the frequency and magnitude of estimated exposure time of pteropods in a cohort when conditions were under-saturated below $\\Omega_{crit} = 1.2$.  Dotted lines in (a) and (b) connect stations across months to emphasize trends in cumulative stress.  Shaded regions in subplots (c) and (d) show the 95\\% confidence and prediction intervals for the solid regression lines."}
+```{r cumstr, out.width = "70%", fig.align = 'center', fig.cap = "Relationships between percent type III dissolution and cumulative stress magnitude within generation years.  The top plots (a, b) show the progression of estimated cumulative stress from July to April throughout a generation year for each station.  Generation years are defined as the sample months July, September, to April covering two calendar years (e.g., 2015 generation year is July, September 2015 and April 2016 calendar years). The bottom plots (c, d) show the estimated linear relationship between percent dissolution and cumulative stress.  The cumulative stress estimates represent the frequency and magnitude of estimated exposure time of pteropods in a generation year when conditions were under-saturated below $\\Omega_{crit} = 1.2$.  Dotted lines in (a) and (b) connect stations across months to emphasize trends in cumulative stress.  Shaded regions in subplots (c) and (d) show the 95\\% confidence intervals for the solid regression lines. The confidence intervals reflect uncertainty in the regression fit (slope and intercept) describing the association between dissolution and cumulative stress."}
 knitr::include_graphics('figs/cumstr.jpg')
 ```
 
